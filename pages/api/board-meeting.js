@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   const auth = req.headers.authorization;
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: "Unauthorized" });
   try {
-    console.log("[BoardMeeting] íƒìƒ‰");
+    console.log("[BoardMeeting] search");
     const grants = await searchGrants();
     if (!grants.length) return res.status(200).json({ message: "no grants" });
     const results = [];
