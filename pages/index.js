@@ -125,7 +125,7 @@ const parsed = JSON.parse(m[0]);
       const sorted = (parsed.grants || []).sort((a, b) => (b.matchScore||0) - (a.matchScore||0));
       setGrants(sorted);
       setStatus(parsed.searchSummary || `${sorted.length}개 공고`);
-    } catch { setStatus("검색 실패"); }
+    } catch (err) { console.error(err); setStatus(err.message || "검색 실패"); }
     finally { setSearching(false); }
   }
 
