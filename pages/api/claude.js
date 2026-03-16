@@ -4,6 +4,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+
   try {
     const { messages, system, tools, max_tokens = 2000 } = req.body;
 
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
         return res.status(200).json(response);
       }
 
-      // server-tool: append assistant turn and continue
+      // server-tool: append assistant turn and continue — do NOT fabricate tool_result
       history = [
         ...history,
         { role: "assistant", content: response.content },
