@@ -25,7 +25,13 @@ async function callClaude({ messages, system, tools, max_tokens = 1500 }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, system, tools, max_tokens }),
   });
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Claude API 호출 실패");
+  }
+
+  return data;
 }
 
 async function postToSlack(action, data) {
@@ -90,9 +96,32 @@ function GrantSearch({ onSelectGrant }) {
           content: `한국 정부 R&D 공고 검색: "${sq}"\n기업: ${UMTR.company} (${UMTR.mainBiz})\n키워드: ${UMTR.keywords.join(", ")}\n\n웹 검색 후 JSON만 반환:\n{"grants":[{"title":"","agency":"","budget":"","deadline":"","period":"","summary":"","url":"","matchScore":0-100,"matchReasons":[]}],"searchSummary":""}`,
         }],
       });
-      const text = data.content?.find(b => b.type === "text")?.text || "{}";
-      const m = text.match(/\{[\s\S]*\}/);
-      const parsed = m ? JSON.parse(m[0]) : { grants: [] };
+const blocks = Array.isArray(data.content) ? data.content : [];
+
+const toolError = blocks.find(
+  (b) =>
+    b.type === "web_search_tool_result" &&
+    b.content &&
+    !Array.isArray(b.content) &&
+    b.content.type === "web_search_tool_result_error"
+);
+
+if (toolError) {
+  throw new Error(`웹 검색 오류: ${toolError.content.error_code}`);
+}
+
+const text = blocks
+  .filter((b) => b.type === "text" && typeof b.text === "string")
+  .map((b) => b.text)
+  .join("\n");
+
+const m = text.match(/\{[\s\S]*\}/);
+
+if (!m) {
+  throw new Error(text || "Claude 응답에서 JSON을 찾지 못했습니다.");
+}
+
+const parsed = JSON.parse(m[0]);
       const sorted = (parsed.grants || []).sort((a, b) => (b.matchScore||0) - (a.matchScore||0));
       setGrants(sorted);
       setStatus(parsed.searchSummary || `${sorted.length}개 공고`);
@@ -324,9 +353,10 @@ function ProposalGenerator({ prefillGrant }) {
         summary: proposal.overview?.summary,
       });
       setSaved(true);
-    } catch { alert("Slack 전송 실패"); }
-    finally { setSaving(false); }
-  }
+} catch (err) {
+  console.error(err);
+  setStatus(err.message || "검색 실패");
+}
 
   const YC = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b"];
 
