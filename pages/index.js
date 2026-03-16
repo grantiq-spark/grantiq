@@ -1,4 +1,4 @@
-// pages/index.js — GRANTIQ 메인 대시보드 (대표/임원용)
+// pages/index.js — GRANTIQ 메인 대시보드
 import { useState } from "react";
 import Head from "next/head";
 
