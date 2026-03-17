@@ -81,3 +81,4 @@ npm run dev
 - **AI**: Claude claude-sonnet-4-20250514 (API 프록시로 키 보안)
 - **저장**: Notion API
 - **배포**: Vercel
+
