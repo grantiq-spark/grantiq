@@ -27,6 +27,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
+      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
+      slackConfigured: !!(process.env.SLACK_BOT_TOKEN && process.env.SLACK_SIGNING_SECRET),
+      dbConfigured: !!process.env.DATABASE_URL,
+      monitorEnabled: process.env.MONITOR_ENABLED !== "false",
       db_mode: process.env.DATABASE_URL ? "persistent" : "in-memory",
       db_warning: !process.env.DATABASE_URL
         ? "in-memory DB — 서버 재시작 시 데이터 초기화됩니다. DATABASE_URL 설정 시 영속 저장 활성화됩니다."
@@ -73,6 +77,10 @@ export default async function handler(req, res) {
           .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
           .slice(0, 5),
       },
+      lastMonitorRunAt: jobs
+        .filter(j => j.type === "monitor")
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))[0]?.completed_at || null,
+      latestOpportunityCount: opps.length,
       documents: docs
         .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
         .slice(0, 10)
