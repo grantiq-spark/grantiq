@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['pdf-parse'],
+  // pdf-parse uses require() patterns incompatible with SWC bundler — keep as external
+  serverExternalPackages: ["pdf-parse"],
   env: {
-    NEXT_PUBLIC_COMPANY_NAME: process.env.COMPANY_NAME || "㎌움틀",
+    NEXT_PUBLIC_COMPANY_NAME: process.env.COMPANY_NAME || "GRANTIQ",
   },
 };
 
