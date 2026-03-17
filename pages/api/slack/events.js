@@ -30,95 +30,126 @@ async function readRawBody(req) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const rawBuf = await readRawBody(req);
-  const rawStr = rawBuf.toString("utf8");
+  const rawBody = await readRawBody(req);
+  const isValid = await verifySlackSignature(req, rawBody);
+  if (!isValid) return res.status(401).json({ error: "Invalid signature" });
 
-  if (!verifySlackSignature(req, rawStr)) {
-    return res.status(401).json({ error: "Invalid signature" });
+  const body = JSON.parse(rawBody.toString());
+
+  // Slack URL verification challenge
+  if (body.type === "url_verification") {
+    return res.status(200).json({ challenge: body.challenge });
   }
 
-  let payload;
-  try { payload = JSON.parse(rawStr); }
-  catch { return res.status(400).json({ error: "Invalid JSON" }); }
+  // Ack immediately
+  res.status(200).end();
 
-  if (payload.type === "url_verification") {
-    return res.status(200).json({ challenge: payload.challenge });
-  }
+  const event = body.event || {};
+  const { type, channel: channel_id, text, ts, thread_ts, user, file } = event;
 
-  res.status(200).json({ ok: true });
-
-  const event = payload.event;
-  if (!event) return;
-
-  Promise.resolve().then(async () => {
-    if (event.type === "file_shared") await handleFileShared(event);
-    if (event.type === "app_mention") await handleAppMention(event);
-  }).catch(err => console.error("[events] unhandled:", err));
-}
-
-async function handleFileShared(event) {
-  const { file_id, channel_id } = event;
-  if (!file_id || !channel_id) return;
-  await addReaction(channel_id, event.event_ts, "eyes").catch(() => {});
-  await postMessage({ channel: channel_id, text: "Analyzing file...", blocks: ingestionProgressBlocks("file", "processing", "Extracting company memory") });
-  try {
-    const { ingestSlackFile } = await import("../../../lib/ingest/slackFiles.js");
-    const result = await ingestSlackFile(file_id);
-    const caps = (result.extracted?.capabilities?.length) || 0;
-    const projs = (result.extracted?.past_projects?.length) || 0;
-    const snippets = (result.extracted?.evidence_snippets?.length) || 0;
-    await postMessage({ channel: channel_id, text: "Done: "+result.name, blocks: ingestionProgressBlocks(result.name,"done",result.text_length+"chars caps:"+caps+" projs:"+projs+" evidence:"+'snippets) });
-    await addReaction(channel_id, event.event_ts,"white_check_mark").catch(()=>{});
-  } catch(err) {
-    console.error("[file_shared]",err);
-    await postMessage({ channel: channel_id, text: "Failed: "+err.message, blocks: ingestionProgressBlocks("file","error",err.message) });
-    await addReaction(channel_id,event.event_ts,"x").catch(()=>{});
-  }
-}
-
-async function handleAppMention(event) {
-  const { channel, ts, text } = event;
-  const cmd = (text||"").replace(/<@[^>]+>/g,"").trim();
-  const lower = cmd.toLowerCase();
-  if (!cmd || lower.includes("help")) {
-    await postMessage({ channel, thread_ts: ts, text: "*GRANTIQ commands*\n- Upload file => auto memory\n- monitor now => search\n- memory status => show\n- review <id> => board\n- proposal <id> => draft\n- status => info" });
-    return;
-  }
-  if (lower.includes("memory")) {
-    const mem=await buildMemoryContext();
-    await postMessage({ channel, thread_ts: ts, text: "Memory: "+mem.company_name+"\ncaps:"+mem.capabilities.length+" projs:"+mem.past_projects.length+" evidence:"+mem.evidence_snippets.length+((process.env.DATABASE_URL)?"":"\n[WARNING] in-memory DB") });
-    return;
-  }
-  if (lower.includes("monitor")||lower.includes("search")) {
-    await postMessage({ channel, thread_ts: ts, text: "Searching..." });
+  // --- file_shared: ingest company document ---
+  if (type === "file_shared") {
+    const file_id = file?.id || event.file_id;
+    if (!file_id) return;
     try {
-      const q=lower.replace(/monitor|search|now/g,"").trim()||null;
-      const opps=await fetchOpportunities(q);
-      if (!opps.length){ await postMessage({ channel, thread_ts: ts, text:"No results." }); return; }
-      let posted=0;
-      for(/const opp of opps.slice(0,5)) {
-        const v=await verifyOpportunity(opp);
-        const rec=await dbInsert("opportunities",{...opp,fit_score:v.fit_score,fit_grade:v.fit_grade,verdict:v.verdict,status:"found"});
-        if(v.fit_score>=55){ await postMessage({ channel, thread_ts:ts, text:"Found ("+v.fit_score+"pts): "+opp.title, blocks:boardPacketBlocks(rec) }); posted++; }
+      await postMessage({ channel: channel_id, text: "Ingesting file...", blocks: ingestionProgressBlocks("file","loading","Reading...") });
+      const { ingestSlackFile } = await import("../../../lib/ingest/slackFiles.js");
+      const result = await ingestSlackFile(file_id);
+      const caps = (result.extracted && result.extracted.capabilities && result.extracted.capabilities.length) || 0;
+      const projs = (result.extracted && result.extracted.past_projects && result.extracted.past_projects.length) || 0;
+      const snippets = (result.extracted && result.extracted.evidence_snippets && result.extracted.evidence_snippets.length) || 0;
+      await postMessage({ channel: channel_id, text: "Done: " + result.name + ", caps:" + caps + ", projs:" + projs + ", evidence:" + snippets, blocks: ingestionProgressBlocks(result.name, "done", result.text_length + " chars") });
+      await addReaction(channel_id, event.event_ts, "white_check_mark").catch(() => {});
+    } catch (err) {
+      console.error("[file_shared]", err);
+      await postMessage({ channel: channel_id, text: "Failed: " + err.message, blocks: ingestionProgressBlocks("file", "error", err.message) });
+      await addReaction(channel_id, event.event_ts, "x").catch(() => {});
+    }
+    return;
+  }
+
+  // --- app_mention: command routing ---
+  if (type === "app_mention" && text) {
+    const lower = text.toLowerCase();
+    const ts_reply = thread_ts || ts;
+
+    // "scan" or "opportunities": fetch + verify + post
+    if (lower.includes("scan") || lower.includes("opportunit")) {
+      try {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Scanning opportunities..." });
+        const memory = await buildMemoryContext();
+        const opps = await fetchOpportunities(memory);
+        if (!opps.length) {
+          await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "No results." });
+          return;
+        }
+        let posted = 0;
+        for (const opp of opps.slice(0, 5)) {
+          const v = await verifyOpportunity(opp);
+          const rec = await dbInsert("opportunities", { ...opp, fit_score: v.fit_score, fit_grade: v.fit_grade, verdict: v.verdict, status: "found" });
+          if (v.fit_score >= 55) {
+            await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Found (" + v.fit_score + "pts): " + opp.title, blocks: boardPacketBlocks(rec) });
+            posted++;
+          }
+        }
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Scan done: " + opps.length + " found, " + posted + " posted" });
+      } catch (err) {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Error: " + err.message }).catch(() => {});
       }
-      await postMessage({ channel, thread_ts:ts, text:"Done: "+opps.length+" searched, "+posted+" posted" });
-    } catch(err){ await postMessage({ channel, thread_ts:ts, text:"Error: "+err.message }); }
-    return;
+      return;
+    }
+
+    // "review": board review on latest opportunity
+    if (lower.includes("review")) {
+      try {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Running board review..." });
+        const opps = await dbList("opportunities");
+        const latest = opps && opps[0];
+        if (!latest) {
+          await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "No opportunities found. Run scan first." });
+          return;
+        }
+        const result = await runBoardReview(latest);
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Board review done: " + result.summary });
+      } catch (err) {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Error: " + err.message }).catch(() => {});
+      }
+      return;
+    }
+
+    // "draft" or "proposal": generate proposal draft
+    if (lower.includes("draft") || lower.includes("proposal")) {
+      try {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Generating proposal draft..." });
+        const opps = await dbList("opportunities");
+        const latest = opps && opps[0];
+        if (!latest) {
+          await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "No opportunities found. Run scan first." });
+          return;
+        }
+        const draft = await generateProposal(latest);
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Draft ready: " + draft.title + "\n" + draft.summary });
+      } catch (err) {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Error: " + err.message }).catch(() => {});
+      }
+      return;
+    }
+
+    // "status": show current DB state
+    if (lower.includes("status")) {
+      try {
+        const opps = (await dbList("opportunities")) || [];
+        const reviews = (await dbList("board_reviews")) || [];
+        const drafts = (await dbList("proposals")) || [];
+        const dbNote = process.env.DATABASE_URL ? "" : " [WARNING: in-memory DB]";
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Status: opps:" + opps.length + " reviews:" + reviews.length + " drafts:" + drafts.length + dbNote });
+      } catch (err) {
+        await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Error: " + err.message }).catch(() => {});
+      }
+      return;
+    }
+
+    // Default: help message
+    await postMessage({ channel: channel_id, thread_ts: ts_reply, text: "Commands: scan | review | draft | status" });
   }
-  const rm=lower.match(/review\s+([^\s]+)/i);
-  if(rm){
-    const opp=await dbGet("opportunities",rm[1]).catch(()=>null);
-    if(!opp){ await postMessage({ channel, thread_ts:ts, text:"Not found: "+rm[1] }); return; }
-    await postMessage({ channel, thread_ts:ts, text:"Board review: "+opp.title });
-    await runBoardReview({ opportunity:opp, slackChannel:channel, threadTs:ts });
-    return;
-  }
-  const pm=lower.match(/proposal\s+([^\s]+)/i);
-  if(pm){ await generateProposal({ opportunityId:pm[1], slackChannel:channel, threadTs:ts }); return; }
-  if(lower.includes("status")){
-    const [opps,reviews,drafts]=await Promise.all([dbList("opportunities").catch(()=>[]),dbList("board_reviews").catch(()=>[]),dbList("proposal_drafts").catch(()=>[])]);
-    await postMessage({ channel, thread_ts:ts, text:"Status: opps:"+opps.length+" reviews:"+reviews.length+" drafts:"+drafts.length+((process.env.DATABASE_URL"ÿ"":"\n[WARNING] in-memory DB") });
-    return;
-  }
-  await postMessage({ channel, thread_ts:ts, text:"Unknown command. Try @GRANTIQ help" });
 }

@@ -47,32 +47,32 @@ export default async function handler(req, res) {
   Promise.resolve().then(async () => {
     if (actionId === "approve_opportunity") {
       const opp = await dbGet("opportunities", value).catch(() => null);
-      if (!opp) { await postMessage({ channel, thread_ts: threadTs, text: "❌ 공고 데이터 쬾을 수 없습니다: "+value }); return; }
+      if (!opp) { await postMessage({ channel, thread_ts: threadTs, text: "                                                                                   : "+value }); return; }
       await dbUpdate("opportunities", value, { status: "approved" }).catch(() => {});
-      await postMessage({ channel, thread_ts: threadTs, text: (userId?"<@"+userId+">읈 심의 승인됐습니다.":"심의가 승인됐습니다.")+" 이사회 회사을 소진 엔됩니다 🏛️" });
+      await postMessage({ channel, thread_ts: threadTs, text: (userId?"<@"+userId+">                                                        .":"                                                       .")+"                                                                                           " });
       await runBoardReview({ opportunity: opp, slackChannel: channel, threadTs });
     } else if (actionId === "pass_opportunity") {
       await dbUpdate("opportunities", value, { status: "passed" }).catch(() => {});
-      await postMessage({ channel, thread_ts: threadTs, text: (userId ? "<@"+userId+"> 님이 이번 �CR" : "�CR")+" 이사회를 공고 언샬 ." });
+      await postMessage({ channel, thread_ts: threadTs, text: (userId ? "<@"+userId+">                               CR" : "    CR")+"                                                    ." });
     } else if (actionId === "start_board_review") {
       const opp = await dbGet("opportunities", value).catch(() => null);
-      if (!opp) { await postMessage({ channel, thread_ts: threadTs, text: "❌ 공고 없음: "+value }); return; }
-      await postMessage({ channel, thread_ts: threadTs, text: "🏛️ 이사회 심의 시작: "+opp.title });
+      if (!opp) { await postMessage({ channel, thread_ts: threadTs, text: "                                : "+value }); return; }
+      await postMessage({ channel, thread_ts: threadTs, text: "                                                           : "+opp.title });
       await runBoardReview({ opportunity: opp, slackChannel: channel, threadTs });
     } else if (actionId === "generate_proposal") {
       await generateProposal({ opportunityId: value, slackChannel: channel, threadTs });
     } else if (actionId === "refresh_memory") {
       const mem = await buildMemoryContext();
-      await postMessage({ channel, thread_ts: threadTs, text: "🧠 *메모리 현황* : "+mem.company_name+"\n역량 "+mem.capabilities.length+"개 · 실적 "+mem.past_projects.length+"개 · 근거 "+mem.evidence_snippets.length+"개"+(process.env.DATABASE_URL?"":"\n⚠️ in-memory DB") });
+      await postMessage({ channel, thread_ts: threadTs, text: "         *                               * : "+mem.company_name+"\n             "+mem.capabilities.length+"                         "+mem.past_projects.length+"                         "+mem.evidence_snippets.length+"      "+(process.env.DATABASE_URL?"":"\n             in-memory DB") });
     } else if (actionId === "rerun_monitor") {
-      await postMessage({ channel, thread_ts: threadTs, text: "🔍 공고 실행..." });
+      await postMessage({ channel, thread_ts: threadTs, text: "                                  ..." });
       const opps = await fetchOpportunities(); let posted = 0;
       for (const opp of opps.slice(0,3)) {
         const v = await verifyOpportunity(opp);
-        const rec = await dbInsert("opportunities",L...opp, fit_score:v.fit_score, fit_grade:v.fit_grade, verdict:v.verdict, status:"found"});
-        if(v.fit_score>=55){ await postMessage({ channel, thread_ts:threadTs, text:"공고("+v.fit_score+"pts): "+opp.title, blocks:proactiveOpportunityBlocks(rec,[],null) }); posted++; }
+        const rec = await dbInsert("opportunities",{...opp, fit_score:v.fit_score, fit_grade:v.fit_grade, verdict:v.verdict, status:"found"});
+        if(v.fit_score>=55){ await postMessage({ channel, thread_ts:threadTs, text:"            ("+v.fit_score+"pts): "+opp.title, blocks:proactiveOpportunityBlocks(rec,[],null) }); posted++; }
       }
-      await postMessage({ channel, thread_ts:threadTs, text:"B⸉ 탐색 "+opps.length+"{밐,"tposted+"�개" });
+      await postMessage({ channel, thread_ts:threadTs, text:"Analysis done: "+opps.length+" found, "+posted+" posted" });
     }
-  }).catch(err => { postMessage({ channel, thread_ts:threadTs, text:"❌ 엄스: "+err.message }).catch(()=>{}); });
+  }).catch(err => { postMessage({ channel, thread_ts:threadTs, text:"Error: "+err.message }).catch(()=>{}); });
 }
