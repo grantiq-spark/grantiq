@@ -203,8 +203,7 @@ export default function App() {
               <div style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🔌 Slack 워크플로우</div>
               <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 2 }}>파일 업로드 → 자동 메모리 추출 · <code>@GRANTIQ 공고 탐색</code> → 검색 · 카드 버튼 → 이사회 심의 · GO → 사업계획서<br />Events: <code>/api/slack/events</code> · Interactivity: <code>/api/slack/interactivity</code></div>
             </div>
-          </>
-        }
+          </>}
         </div>
       )}
 
