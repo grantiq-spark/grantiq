@@ -20,18 +20,21 @@ const PRESET_QUERIES = [
 ];
 
 // ─── API 호출 헬퍼 ─────────────────────────────────────────────────────────────
-async function callClaude({ messages, system, tools, tool_choice, max_tokens = 1500 }) {
-  const res = await fetch("/api/claude", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, system, tools, tool_choice, max_tokens }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "HTTP " + res.status }));
-    throw new Error(err.error || "Claude API " + res.status);
+  async function callClaude(body) {
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const err = new Error(data.error || "API 오류");
+      err.code = data.code || "UNKNOWN";
+      err.status = res.status;
+      throw err;
+    }
+    return data;
   }
-  return res.json();
-}
 
 async function postToSlack(action, data) {
   const res = await fetch("/api/slack", {
@@ -107,7 +110,17 @@ function GrantSearch({ onSelectGrant }) {
       const sorted = (parsed.grants || []).sort((a, b) => (b.matchScore||0) - (a.matchScore||0));
       setGrants(sorted);
       setStatus(parsed.searchSummary || `${sorted.length}개 공고`);
-    } catch (err) { console.error(err); setStatus(err.message || "검색 실패"); }
+    } catch (err) {
+        console.error("Search error:", err);
+        const msg = err.code === "RATE_LIMIT"
+          ? "⚠️ API 요청 한도 초과. 1분 후 다시 시도해주세요."
+          : err.code === "AUTH_ERROR"
+          ? "❌ API 키 오류. 관리자에게 문의하세요."
+          : err.code === "OVERLOADED"
+          ? "⏳ Claude 서버 혼잡. 잠시 후 다시 시도해주세요."
+          : "❌ " + (err.message || "검색 실패");
+        setStatus(msg);
+      }
     finally { setSearching(false); }
   }
 
@@ -177,6 +190,7 @@ function GrantSearch({ onSelectGrant }) {
               <div style={{ fontSize: 12 }}>위 버튼으로 공고를 검색해보세요</div>
             </div>
           )}
+            {!searching && status && <p style={{ padding: "8px 12px", color: status.includes("⚠") || status.includes("❌") || status.includes("⏳") ? "#ff6b6b" : "#60a5fa", fontSize: 13 }}>{status}</p>}
           {grants.map((g, i) => (
             <div key={i} onClick={() => { setSelected(g); analyze(g); }}
               style={{ padding: "12px 14px", borderBottom: "1px solid #ffffff06", cursor: "pointer",
