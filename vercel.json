@@ -1,8 +1,13 @@
 {
-  "crons": [
-    {
-      "path": "/api/monitor/opportunities",
-      "schedule": "0 9 * * *"
-    }
-  ]
+    "functions": {
+          "pages/api/**/*.js": {
+                  "maxDuration": 60
+          }
+    },
+    "crons": [
+          {
+                  "path": "/api/monitor/opportunities",
+                  "schedule": "0 9 * * *"
+          }
+    ]
 }
