@@ -2,9 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Serverless Runtime: Pro plan max 60s
+// Serverless Runtime: Pro plan max 300s
 export const config = {
-              maxDuration: 60,
+              maxDuration: 300,
 };
 
 export default async function handler(req, res) {
