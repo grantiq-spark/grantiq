@@ -1,53 +1,60 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+// Edge Runtime: Hobby 플랜에서도 최대 30초 허용
 export const config = {
-        maxDuration: 60, // Vercel Pro: 최대 60초 (Hobby는 10초 제한)
+            runtime: "edge",
+            maxDuration: 30,
 };
 
-export default async function handler(req, res) {
-        if (req.method !== "POST") return res.status(405).end();
+export default async function handler(req) {
+            if (req.method !== "POST") {
+                            return new Response(null, { status: 405 });
+            }
 
     try {
-                const { messages, system, tools, tool_choice, max_tokens = 2000 } = req.body;
+                    const { messages, system, tools, tool_choice, max_tokens = 2000 } = await req.json();
 
-            // 모델명: 정확한 버전 문자열 사용
-            const baseParams = { model: "claude-sonnet-4-6", max_tokens };
-                if (system) baseParams.system = system;
-                if (tools) baseParams.tools = tools;
-                if (tool_choice) baseParams.tool_choice = tool_choice;
+                const baseParams = { model: "claude-sonnet-4-6", max_tokens };
+                    if (system) baseParams.system = system;
+                    if (tools) baseParams.tools = tools;
+                    if (tool_choice) baseParams.tool_choice = tool_choice;
 
-            let history = Array.isArray(messages) ? [...messages] : [];
-                let lastResponse = null;
+                let history = Array.isArray(messages) ? [...messages] : [];
+                    let lastResponse = null;
 
-            for (let i = 0; i < 6; i++) {
-                            const response = await client.messages.create({ ...baseParams, messages: history });
-                            lastResponse = response;
+                for (let i = 0; i < 6; i++) {
+                                    const res = await fetch("https://api.anthropic.com/v1/messages", {
+                                                            method: "POST",
+                                                            headers: {
+                                                                                        "x-api-key": process.env.ANTHROPIC_API_KEY,
+                                                                                        "anthropic-version": "2023-06-01",
+                                                                                        "content-type": "application/json",
+                                                            },
+                                                            body: JSON.stringify({ ...baseParams, messages: history }),
+                                    });
 
-                    console.log("turn:", i, "stop_reason:", response.stop_reason, "types:", response.content?.map(b => b.type));
+                        const response = await res.json();
+                                    lastResponse = response;
 
-                    // end_turn 또는 tool_use가 아닌 경우 즉시 반환
-                    if (response.stop_reason !== "pause_turn") {
-                                        return res.status(200).json(response);
-                    }
+                        console.log("turn:", i, "stop_reason:", response.stop_reason);
 
-                    // pause_turn이면 assistant 응답 이어붙이기
-                    history = [...history, { role: "assistant", content: response.content }];
-            }
+                        if (response.stop_reason !== "pause_turn") {
+                                                return new Response(JSON.stringify(response), {
+                                                                            status: 200,
+                                                                            headers: { "content-type": "application/json" },
+                                                });
+                        }
 
-            return res.status(200).json(lastResponse);
-    } catch (err) {
-                console.error("Claude API error:", err?.status, err?.message || err);
-
-            // API 키 문제 구분
-            if (err?.status === 401) {
-                            return res.status(500).json({ error: "ANTHROPIC_API_KEY가 유효하지 않습니다. Vercel 환경변수를 확인하세요." });
-            }
-                if (err?.status === 429) {
-                                return res.status(429).json({ error: "API 요청 한도 초과. 잠시 후 다시 시도해주세요." });
+                        history = [...history, { role: "assistant", content: response.content }];
                 }
 
-            return res.status(500).json({ error: err.message || "Claude API error" });
+                return new Response(JSON.stringify(lastResponse), {
+                                    status: 200,
+                                    headers: { "content-type": "application/json" },
+                });
+    } catch (err) {
+                    console.error("Claude API error:", err);
+                    return new Response(JSON.stringify({ error: err.message || "Claude API error" }), {
+                                        status: 500,
+                                        headers: { "content-type": "application/json" },
+                    });
     }
 }
