@@ -16,7 +16,7 @@ import { generateProposal } from "../../../lib/workflows/generateProposal.js";
 import { buildMemoryContext } from "../../../lib/store/companyMemory.js";
 import { dbInsert, dbGet, dbList } from "../../../lib/db/index.js";
 
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: false }, maxDuration: 60 };
 
 async function readRawBody(req) {
   return new Promise((resolve, reject) => {
