@@ -1,24 +1,24 @@
-// pages/index.js \u2014 GRANTIQ \uBA54\uC778 \uB300\uC2DC\uBCF4\uB4DC (\uB300\uD45C/\uC784\uC6D0\uC6A9)
+// pages/index.js — GRANTIQ 메인 대시보드 (대표/임원용)
 import { useState } from "react";
 import Head from "next/head";
 import { jsonrepair } from "jsonrepair";
 
-// \u2400\u2400\u2400 \uACF5\uD1B5 \uC0C1\uC218 \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── 공통 상수 ───────────────────────────────────────────────────
 const UMTR = {
-  company: process.env.NEXT_PUBLIC_COMPANY_NAME || "\u2468\uC6C0\uD2C0",
-  mainBiz: "\uBC14\uC774\uC624\uC0B0\uC5C5\uC6A9 NC/PES \uBA64\uBE0C\uB808\uC778\u00B7\uD544\uD130 \uC5F0\uAD6C\uAC1C\uBC1C\u00B7\uC81C\uC870",
-  keywords: ["\uBC14\uC774\uC624 \uBA64\uBE0C\uB808\uC778", "\uC18C\uBD80\uC7A5 \uAD6D\uC0B0\uD654", "PES \uC911\uACF5\uC0AC\uB9C9\uC778", "NC \uBA64\uBE0C\uB808\uC778", "TFF \uBAA8\uB4C8", "\uC7AC\uAD00\uD544\uD130", "GMP", "\uCCB4\uC678\uC9C4\uB2E8\uAE30\uAE30", "ISO13485"],
+  company: process.env.NEXT_PUBLIC_COMPANY_NAME || "⑨움틀",
+  mainBiz: "바이오산업용 NC/PES 멤브레인·필터 연구개발·제조",
+  keywords: ["바이오 멤브레인", "소부장 국산화", "PES 중공사막인", "NC 멤브레인", "TFF 모듈", "재관필터", "GMP", "체외진단기기", "ISO13485"],
 };
 
 const PRESET_QUERIES = [
-  { label: "\uBC14\uC774\uC624 \uC18C\uBD80\uC7A5", q: "\uBC14\uC774\uC624 \uC18C\uBD80\uC7A5 R&D \uC9C0\uC6D0\uC0AC\uC5C5 \uACF5\uACE0 2025 2026" },
-  { label: "\uBA64\uBE0C\uB808\uC778 \uAE30\uC220\uAC1C\uBC1C", q: "\uBA64\uBE0C\uB808\uC778 \uD544\uD130 \uAE30\uC220\uAC1C\uBC1C \uC815\uBD80 R&D \uAE08\uACE0 2026" },
-  { label: "\uC0B0\uC5C5\uD1B5\uC0C1\uC790\uC6D0\uBD80", q: "\uC0B0\uC5C5\uD1B5\uC0C1\uC790\uC6D0\uBD80 \uC18C\uC7AC\uBD80\uD488\uC7A5\uBE44 R&D \uACF5\uACE0 2026" },
-  { label: "\uCC3D\uC5C5\u00B7\uBCA4\uCC98", q: "\uBC14\uC774\uC624 \uCC3D\uC5C5\uC9C0\uC6D0 \uBCA4\uCC98\uC721\uC131 2026 \uC18C\uBD80\uC7A5" },
-  { label: "IRIS \uAC80\uC0C9", q: "iris.go.kr \uBA64\uBE0C\uB808\uC778 \uBD84\uB9AC\uB9C9 R&D 2026" },
+  { label: "바이오 소부장", q: "바이오 소부장 R&D 지원사업 공고 2025 2026" },
+  { label: "멤브레인 기술개발", q: "멤브레인 필터 기술개발 정부 R&D 금고 2026" },
+  { label: "산업통상자원부", q: "산업통상자원부 소재부품장비 R&D 공고 2026" },
+  { label: "창업·벤처", q: "바이오 창업지원 벤처육성 2026 소부장" },
+  { label: "IRIS 검색", q: "iris.go.kr 멤브레인 분리막 R&D 2026" },
 ];
 
-// \u2400\u2400\u2400 API \uD638\uCD9C \uD5EC\uD37C \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── API 호출 헬퍼 ──────────────────────────────────────────────────
 async function callClaude(body) {
   const res = await fetch("/api/claude", {
     method: "POST",
@@ -27,7 +27,7 @@ async function callClaude(body) {
   });
   const data = await res.json();
   if (!res.ok) {
-    const err = new Error(data.error || "API \uC624\uB958");
+    const err = new Error(data.error || "API 오류");
     err.code = data.code || "UNKNOWN";
     err.status = res.status;
     throw err;
@@ -44,7 +44,7 @@ async function postToSlack(action, data) {
   return res.json();
 }
 
-// \u2400\u2400\u2400 IRIS \uD30C\uC774\uD504\uB77C\uC778 API \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── IRIS 파이프라인 API ──────────────────────────────────────────────
 async function callIrisSearch(query, source) {
   const res = await fetch("/api/iris/search", {
     method: "POST",
@@ -52,7 +52,7 @@ async function callIrisSearch(query, source) {
     body: JSON.stringify({ query, source: source || "all" }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "IRIS \uAC80\uC0C9 \uC624\uB958");
+  if (!res.ok) throw new Error(data.error || "IRIS 검색 오류");
   return data;
 }
 
@@ -69,11 +69,11 @@ async function callIrisAnalyze(grant) {
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "RFP \uBD84\uC11D \uC624\uB958");
+  if (!res.ok) throw new Error(data.error || "RFP 분석 오류");
   return data;
 }
 
-// \u2400\u2400\u2400 \uACF5\uD1B5 \uCEF4\uD3EC\uB10C\uD2B8 \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── 공통 컴포넌트 ────────────────────────────────────────────────
 function ScoreRing({ score, size = 52 }) {
   const r = (size - 8) / 2, c = 2 * Math.PI * r;
   const color = score >= 80 ? "#10b981" : score >= 60 ? "#3b82f6" : score >= 40 ? "#f59e0b" : "#ef4444";
@@ -117,7 +117,7 @@ function StepIndicator({ steps, current }) {
   );
 }
 
-// \u2400\u2400\u2400 \uACF5\uACE0 \uD0D0\uC0C9 \uD0ED \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── 공고 탐색 탭 ─────────────────────────────────────────────────
 function GrantSearch({ onSelectGrant }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -131,13 +131,13 @@ function GrantSearch({ onSelectGrant }) {
   async function search(q) {
     const sq = q || query;
     if (!sq.trim() || searching) return;
-    setSearching(true); setGrants([]); setSelected(null); setStatus("\uAC80\uC0C9 \uC911...");
+    setSearching(true); setGrants([]); setSelected(null); setStatus("검색 중...");
     try {
       const data = await callClaude({
         tools: [{ type: "web_search_20250305", name: "web_search" }],
         messages: [{
           role: "user",
-          content: `\uD55C\uAD6D \uC815\uBD80 R&D \uACF5\uACE0 \uAC80\uC0C9: "${sq}"\n\uAE30\uC5C5: ${UMTR.company} (${UMTR.mainBiz})\n\uD0A4\uC6CC\uB4DC: ${UMTR.keywords.join(", ")}\n\n\uC8FC\uC694 \uCD9C\uCC98: iris.go.kr, ntis.go.kr, mss.go.kr, keit.re.kr, bioin.or.kr\n\n\uACB0\uACFC\uB294 JSON\uC73C\uB85C: {"grants":[{"title":"","agency":"","deadline":"","budget":"","matchScore":0\u223C100,"reason":"","url":"","source":""}],"searchSummary":""}`,
+          content: `한국 정부 R&D 공고 검색: "${sq}"\n기업: ${UMTR.company} (${UMTR.mainBiz})\n키워드: ${UMTR.keywords.join(", ")}\n\n주요 출처: iris.go.kr, ntis.go.kr, mss.go.kr, keit.re.kr, bioin.or.kr\n\n결과는 JSON으로: {"grants":[{"title":"","agency":"","deadline":"","budget":"","matchScore":0∼100,"reason":"","url":"","source":""}],"searchSummary":""}`,
         }],
       });
       const text = data.content?.find(b => b.type === "text")?.text || "{}";
@@ -151,16 +151,16 @@ function GrantSearch({ onSelectGrant }) {
       }
       const sorted = (parsed.grants || []).sort((a, b) => (b.matchScore||0) - (a.matchScore||0));
       setGrants(sorted);
-      setStatus(parsed.searchSummary || `${sorted.length}\uAC1C \uACF5\uACE0`);
+      setStatus(parsed.searchSummary || `${sorted.length}개 공고`);
     } catch (err) {
       console.error("Search error:", err);
       const msg = err.code === "RATE_LIMIT"
-        ? "\u26A0\uFE0F API \uC694\uCCAD \uD55C\uB3C4 \uCD08\uACFC. 1\uBD84 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        ? "⚠️ API 요청 한도 초과. 1분 후 다시 시도해주세요."
         : err.code === "AUTH_ERROR"
-        ? "\u274C API \uD0A4 \uC624\uB958. \uAD00\uB9AC\uC790\uC5D0\uAC8C \uBB38\uC758\uD558\uC138\uC694."
+        ? "❌ API 키 오류. 관리자에게 문의하세요."
         : err.code === "OVERLOADED"
-        ? "\u23F3 Claude \uC11C\uBC84 \uD63C\uC7A1. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
-        : "\u274C " + (err.message || "\uAC80\uC0C9 \uC2E4\uD328");
+        ? "⏳ Claude 서버 혼잡. 잠시 후 다시 시도해주세요."
+        : "❌ " + (err.message || "검색 실패");
       setStatus(msg);
     }
     finally { setSearching(false); }
@@ -173,7 +173,7 @@ function GrantSearch({ onSelectGrant }) {
       const data = await callClaude({
         messages: [{
           role: "user",
-          content: `\uAE30\uC5C5: ${UMTR.company} | ${UMTR.mainBiz} | \uD0A4\uC6CC\uB4DC: ${UMTR.keywords.join(", ")}\n\uACF5\uACE0: ${grant.title}\n\uAE30\uAD00: ${grant.agency}\n\n\uBD84\uC11D JSON: {"verdict":"S|A|B|C","fitScore":0\u223C100,"reasons":["\uAD6C\uCCB4\uC801 \uC774\uC720"],"strategy":"\uC811\uADFC\uC804\uB7B5","risk":"\uC8FC\uC694\uC704\uD5D8"}`,
+          content: `기업: ${UMTR.company} | ${UMTR.mainBiz} | 키워드: ${UMTR.keywords.join(", ")}\n공고: ${grant.title}\n기관: ${grant.agency}\n\n분석 JSON: {"verdict":"S|A|B|C","fitScore":0∼100,"reasons":["구체적 이유"],"strategy":"접근전략","risk":"주요위험"}`,
         }],
       });
       const text = data.content?.[0]?.text || "{}";
@@ -188,7 +188,7 @@ function GrantSearch({ onSelectGrant }) {
       const an = analysis[grant.title];
       await postToSlack("shareGrant", { ...grant, verdict: an?.verdict });
       setSaved(p => ({ ...p, [grant.title]: true }));
-    } catch { alert("Slack \uC804\uC1A1 \uC2E4\uD328. .env SLACK_WEBHOOK_URL \uD655\uC778"); }
+    } catch { alert("Slack 전송 실패. .env SLACK_WEBHOOK_URL 확인"); }
   }
 
   const s = selected; const an = s ? analysis[s.title] : null;
@@ -196,17 +196,17 @@ function GrantSearch({ onSelectGrant }) {
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 112px)", gap: 0 }}>
-      {/* \uB9AC\uC2A4\uD2B8 \uD328\uB110 */}
+      {/* 리스트 패널 */}
       <div style={{ width: 420, borderRight: "1px solid #ffffff09", display: "flex", flexDirection: "column" }}>
-        {/* \uAC80\uC0C9\uCC3D */}
+        {/* 검색창 */}
         <div style={{ padding: "14px 16px", borderBottom: "1px solid #ffffff09", background: "#0a0c15" }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && search()}
-              placeholder="\uACF5\uACE0 \uAC80\uC0C9\uC5B4 \uC785\uB825..."
+              placeholder="공고 검색어 입력..."
               style={{ flex: 1, background: "#ffffff08", border: "1px solid #ffffff09", borderRadius: 8, padding: "9px 14px", color: "#e2e8f0", fontSize: 13, outline: "none" }}/>
             <button onClick={() => search()} disabled={searching}
               style={{ padding: "9px 16px", borderRadius: 8, border: "none", background: searching ? "#1e1e2e" : "#3b82f6", color: "#fff", cursor: "pointer", fontSize: 13 }}>
-              {searching ? <Spinner size={16} color="#6b7280"/> : "\uAC80\uC0C9"}
+              {searching ? <Spinner size={16} color="#6b7280"/> : "검색"}
             </button>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -218,21 +218,21 @@ function GrantSearch({ onSelectGrant }) {
             ))}
           </div>
         </div>
-        {/* \uC0C1\uD0DC */}
+        {/* 상태 */}
         {status && (
           <div style={{ padding: "8px 16px", fontSize: 11, color: searching ? "#8b5cf6" : "#10b981", display: "flex", gap: 6, alignItems: "center" }}>
             {searching && <Spinner size={12} color="#8b5cf6"/>} {status}
           </div>
         )}
-        {/* \uB9AC\uC2A4\uD2B8 */}
+        {/* 리스트 */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {grants.length === 0 && !searching && (
             <div style={{ padding: "50px 20px", textAlign: "center", color: "#374151" }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>&#128270;</div>
-              <div style={{ fontSize: 12 }}>\uC704 \uBC84\uD2BC\uC73C\uB85C \uACF5\uACE0\uB97C \uAC80\uC0C9\uD574\uBCF4\uC138\uC694</div>
+              <div style={{ fontSize: 12 }}>위 버튼으로 공고를 검색해보세요</div>
             </div>
           )}
-          {!searching && status && <p style={{ padding: "8px 12px", color: status.includes("\u26A0") || status.includes("\u274C") ? "#ef4444" : "#4b5563", fontSize: 11 }}></p>}
+          {!searching && status && <p style={{ padding: "8px 12px", color: status.includes("⚠") || status.includes("❌") ? "#ef4444" : "#4b5563", fontSize: 11 }}></p>}
           {grants.map((g, i) => (
             <div key={i} onClick={() => { setSelected(g); analyze(g); }}
               style={{ padding: "12px 14px", borderBottom: "1px solid #ffffff06", cursor: "pointer",
@@ -251,12 +251,12 @@ function GrantSearch({ onSelectGrant }) {
         </div>
       </div>
 
-      {/* \uC0C1\uC138 \uD328\uB110 */}
+      {/* 상세 패널 */}
       <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
         {!s ? (
           <div style={{ textAlign: "center", color: "#374151", marginTop: 120 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>&#128209;</div>
-            <div style={{ fontSize: 13 }}>\uACF5\uACE0\uB97C \uC120\uD0DD\uD558\uBA74 \uC0C1\uC138 \uBD84\uC11D\uC774 \uD45C\uC2DC\uB429\uB2C8\uB2E4</div>
+            <div style={{ fontSize: 13 }}>공고를 선택하면 상세 분석이 표시됩니다</div>
           </div>
         ) : (
           <div style={{ maxWidth: 680 }}>
@@ -266,36 +266,36 @@ function GrantSearch({ onSelectGrant }) {
                 <span key={i} style={{ fontSize: 10, padding: "3px 10px", borderRadius: 5, background: "#ffffff08", color: "#9ca3af" }}>{v}</span>
               )}
             </div>
-            {s.url && <a href={s.url} target="_blank" rel="noopener" style={{ fontSize: 11, color: "#3b82f6" }}>\uACF5\uACE0 \uC6D0\uBB38 \u2192</a>}
+            {s.url && <a href={s.url} target="_blank" rel="noopener" style={{ fontSize: 11, color: "#3b82f6" }}>공고 원문 →</a>}
             <div style={{ marginTop: 16 }}>
               {s.reason && <p style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1.8, marginBottom: 12 }}>{s.reason}</p>}
 
-              {/* \uBD84\uC11D \uACB0\uACFC */}
+              {/* 분석 결과 */}
               {analyzing === s.title ? (
-                <div style={{ padding: 20, textAlign: "center" }}><Spinner size={24}/><div style={{ fontSize: 11, color: "#6b7280", marginTop: 8 }}>\uBD84\uC11D \uC911...</div></div>
+                <div style={{ padding: 20, textAlign: "center" }}><Spinner size={24}/><div style={{ fontSize: 11, color: "#6b7280", marginTop: 8 }}>분석 중...</div></div>
               ) : an ? (
                 <div style={{ background: "#0d1020", borderRadius: 12, padding: 16, border: "1px solid #ffffff09", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                     <div style={{ fontSize: 28, fontWeight: 900, color: gColor(an.verdict) }}>{an.verdict}</div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>\uC801\uD569\uB3C4: {an.fitScore}%</div>
-                      <div style={{ fontSize: 10, color: "#6b7280" }}>\uB9AC\uC2A4\uD06C: {an.risk}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>적합도: {an.fitScore}%</div>
+                      <div style={{ fontSize: 10, color: "#6b7280" }}>리스크: {an.risk}</div>
                     </div>
                   </div>
-                  {an.reasons?.map((r, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0", borderBottom: "1px solid #ffffff06" }}>\u2022 {r}</div>)}
-                  {an.strategy && <div style={{ fontSize: 11, color: "#a78bfa", marginTop: 8 }}>\uC804\uB7B5: {an.strategy}</div>}
+                  {an.reasons?.map((r, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0", borderBottom: "1px solid #ffffff06" }}>• {r}</div>)}
+                  {an.strategy && <div style={{ fontSize: 11, color: "#a78bfa", marginTop: 8 }}>전략: {an.strategy}</div>}
                 </div>
               ) : null}
 
-              {/* \uBC84\uD2BC */}
+              {/* 버튼 */}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
                 <button onClick={() => onSelectGrant(s)}
                   style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #8b5cf6, #6366f1)", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                  \u270D\uFE0F \uC0AC\uC5C5\uACC4\uD68D\uC11C \uC791\uC131
+                  ✍️ 사업계획서 작성
                 </button>
                 <button onClick={() => saveGrant(s)} disabled={saved[s.title]}
                   style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #ffffff12", background: saved[s.title] ? "#10b98120" : "#ffffff06", color: saved[s.title] ? "#10b981" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
-                  {saved[s.title] ? "\u2713 Slack \uC804\uC1A1\uC644\uB8CC" : "Slack \uACF5\uC720"}
+                  {saved[s.title] ? "✓ Slack 전송완료" : "Slack 공유"}
                 </button>
               </div>
             </div>
@@ -306,7 +306,7 @@ function GrantSearch({ onSelectGrant }) {
   );
 }
 
-// \u2400\u2400\u2400 \uC0AC\uC5C5\uACC4\uD68D\uC11C \uD0ED (\uD30C\uC774\uD504\uB77C\uC778 \uD1B5\uD569) \u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400\u2400
+// ─── 사업계획서 탭 (파이프라인 통합) ──────────────────────────────────
 function ProposalGenerator({ prefillGrant }) {
   // Step management: input -> rfpAnalysis -> proposal -> financial
   const [step, setStep] = useState(prefillGrant ? "input" : "input");
@@ -337,16 +337,16 @@ function ProposalGenerator({ prefillGrant }) {
   const [saved, setSaved] = useState(false);
 
   const SECTIONS = [
-    { id: "overview", label: "\uACFC\uC81C \uAC1C\uC694" },
-    { id: "background", label: "\uBC30\uACBD\u00B7\uD544\uC694\uC131" },
-    { id: "goal", label: "\uCD5C\uC885 \uBAA9\uD45C" },
-    { id: "annual", label: "\uC5F0\uCC28\uBCC4 \uBAA9\uD45C" },
-    { id: "budget", label: "\uC608\uC0B0 \uD3B8\uC131" },
-    { id: "commercialize", label: "\uC0AC\uC5C5\uD654 \uACC4\uD68D" },
-    { id: "effect", label: "\uAE30\uB300\uD6A8\uACFC" },
+    { id: "overview", label: "과제 개요" },
+    { id: "background", label: "배경·필요성" },
+    { id: "goal", label: "최종 목표" },
+    { id: "annual", label: "연차별 목표" },
+    { id: "budget", label: "예산 편성" },
+    { id: "commercialize", label: "사업화 계획" },
+    { id: "effect", label: "기대효과" },
   ];
 
-  const PIPELINE_STEPS = ["RFP \uBD84\uC11D", "\uC0AC\uC5C5\uACC4\uD68D\uC11C", "\uC7AC\uACBD\uBD84\uC11D"];
+  const PIPELINE_STEPS = ["RFP 분석", "사업계획서", "재경분석"];
 
   // Step 1: RFP Analysis via IRIS
   async function analyzeRfp() {
@@ -363,7 +363,7 @@ function ProposalGenerator({ prefillGrant }) {
       setStep("rfpResult");
     } catch (err) {
       console.error("RFP analysis error:", err);
-      alert("RFP \uBD84\uC11D \uC2E4\uD328: " + (err.message || "\uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694"));
+      alert("RFP 분석 실패: " + (err.message || "다시 시도해주세요"));
     }
     finally { setRfpLoading(false); }
   }
@@ -373,38 +373,38 @@ function ProposalGenerator({ prefillGrant }) {
     setGenerating(true); setProposal(null);
     try {
       const rfpContext = rfpResult?.rfp ? `
-RFP \uBD84\uC11D \uACB0\uACFC:
-- \uBAA9\uC801: ${rfpResult.rfp.objectives || "N/A"}
-- \uBC94\uC704: ${rfpResult.rfp.scope || "N/A"}
-- \uCD1D \uC608\uC0B0: ${rfpResult.rfp.budget_total || info.budget}
-- \uACFC\uC81C\uB2F9 \uC608\uC0B0: ${rfpResult.rfp.budget_per_project || "N/A"}
-- \uAE30\uAC04: ${rfpResult.rfp.duration || info.years + "\uB144"}
-- \uC790\uACA9\uC694\uAC74: ${rfpResult.rfp.eligibility || "N/A"}
-- \uD3C9\uAC00\uAE30\uC900: ${rfpResult.rfp.evaluation_criteria || "N/A"}
-- \uD575\uC2EC\uC694\uAD6C\uC0AC\uD56D: ${rfpResult.rfp.key_requirements || "N/A"}
-- \uB300\uC751\uC790\uAE08: ${rfpResult.rfp.matching_fund || "N/A"}` : "";
+RFP 분석 결과:
+- 목적: ${rfpResult.rfp.objectives || "N/A"}
+- 범위: ${rfpResult.rfp.scope || "N/A"}
+- 총 예산: ${rfpResult.rfp.budget_total || info.budget}
+- 과제당 예산: ${rfpResult.rfp.budget_per_project || "N/A"}
+- 기간: ${rfpResult.rfp.duration || info.years + "년"}
+- 자격요건: ${rfpResult.rfp.eligibility || "N/A"}
+- 평가기준: ${rfpResult.rfp.evaluation_criteria || "N/A"}
+- 핵심요구사항: ${rfpResult.rfp.key_requirements || "N/A"}
+- 대응자금: ${rfpResult.rfp.matching_fund || "N/A"}` : "";
 
       const fitContext = rfpResult?.fit_analysis ? `
-\uC801\uD569\uB3C4 \uBD84\uC11D:
-- \uC810\uC218: ${rfpResult.fit_analysis.overall_score}/100
-- \uAC15\uC810: ${rfpResult.fit_analysis.strengths?.join(", ") || "N/A"}
-- \uBCF4\uC644\uC810: ${rfpResult.fit_analysis.weaknesses?.join(", ") || "N/A"}
-- \uBD80\uD569 \uC5ED\uB7C9: ${rfpResult.fit_analysis.matching_capabilities?.join(", ") || "N/A"}` : "";
+적합도 분석:
+- 점수: ${rfpResult.fit_analysis.overall_score}/100
+- 강점: ${rfpResult.fit_analysis.strengths?.join(", ") || "N/A"}
+- 보완점: ${rfpResult.fit_analysis.weaknesses?.join(", ") || "N/A"}
+- 부합 역량: ${rfpResult.fit_analysis.matching_capabilities?.join(", ") || "N/A"}` : "";
 
       const data = await callClaude({
         max_tokens: 4000,
         messages: [{
           role: "user",
-          content: `\uD55C\uAD6D R&D \uC0AC\uC5C5\uACC4\uD68D\uC11C \uCD08\uC548. \uC21C\uC218 JSON\uB9CC \uCD9C\uB825.
+          content: `한국 R&D 사업계획서 초안. 순수 JSON만 출력.
 
-\uAE30\uC5C5: ${UMTR.company} | ${UMTR.mainBiz}
-\uD604\uD669: \uD30C\uC77C\uB7FF NC/PES \uBA64\uBE0C\uB808\uC778 \uC0DD\uC0B0. ISO 13485. \uC0BC\uC131\uBC14\uC774\uC624\uB85C\uC9C1\uC2A4 \uACF5\uB3D9\uC2E4\uC99D \uC644\uB8CC. R&D \uC5F0\uAC04 10\uC5B5+. \uC624\uC1A1 \uBD80\uC9C0 \uD655\uBCF4.
-\uBB38\uC81C: \uBC14\uC774\uC624 \uC18C\uBD80\uC7A5 \uAD6D\uC0B0\uD654\uC728 6%, GMP \uC0DD\uC0B0\uC2DC\uC124 \uBD80\uC7AC.
-\uB0B4\uB7EC\uD2F0\uBE0C: "\uC9C0\uAE08\uAE4C\uC9C0 \uD575\uC2EC \uAE30\uC220\uC744 \uD655\uBCF4\uD574\uC654\uACE0 R&D \uD380\uB4DC\uB85C \uB300\uB7C9\uC0DD\uC0B0 \uBB38\uC81C\uB97C \uD6CC\uC801 \uD574\uACB0\uD560 \uC218 \uC788\uB2E4"
+기업: ${UMTR.company} | ${UMTR.mainBiz}
+현황: 파일럿 NC/PES 멤브레인 생산. ISO 13485. 삼성바이오로직스 공동실증 완료. R&D 연간 10억+. 오송 부지 확보.
+문제: 바이오 소부장 국산화율 6%, GMP 생산시설 부재.
+내러티브: "지금까지 핵심 기술을 확보해왔고 R&D 펀드로 대량생산 문제를 훌적 해결할 수 있다"
 ${rfpContext}
 ${fitContext}
 
-\uACF5\uACE0: ${info.title} / ${info.agency} / ${info.budget || "N/A"} / ${info.years}\uB144
+공고: ${info.title} / ${info.agency} / ${info.budget || "N/A"} / ${info.years}년
 
 {"grantTitle":"","agency":"","totalBudget":"","period":"","overview":{"applicant":"","summary":"","techField":""},"background":{"problem":"","necessity":"","marketSize":"","trend":"","gap":""},"finalGoal":{"statement":"","techGoals":[],"bizGoals":[]},"annualGoals":[{"year":1,"title":"","objectives":[],"milestones":[]}],"budgetOutline":[{"category":"","amount":"","ratio":""}],"commercialization":{"strategy":"","targetMarket":"","timeline":"","revenue":""},"expectedEffects":{"technical":[],"economic":[],"social":[]}}`,
         }],
@@ -421,7 +421,7 @@ ${fitContext}
       setStep("proposal");
     } catch (err) {
       console.error("Generate error:", err);
-      alert("\uC0DD\uC131 \uC2E4\uD328: " + (err.message || "\uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694"));
+      alert("생성 실패: " + (err.message || "다시 시도해주세요"));
     }
     finally { setGenerating(false); }
   }
@@ -435,15 +435,15 @@ ${fitContext}
         max_tokens: 2000,
         messages: [{
           role: "user",
-          content: `CFO \uAD00\uC810 \uC7AC\uACBD\uBD84\uC11D. \uC21C\uC218 JSON\uB9CC \uCD9C\uB825.
+          content: `CFO 관점 재경분석. 순수 JSON만 출력.
 
-\uAE30\uC5C5: ${UMTR.company} | ${UMTR.mainBiz}
-\uACF5\uACE0: ${proposal.grantTitle || info.title}
-\uCD1D \uC608\uC0B0: ${proposal.totalBudget || info.budget}
-\uAE30\uAC04: ${proposal.period || info.years + "\uB144"}
-\uC0AC\uC5C5\uD654: ${proposal.commercialization?.strategy || "N/A"}
-\uBAA9\uD45C\uC2DC\uC7A5: ${proposal.commercialization?.targetMarket || "N/A"}
-\uC608\uC0C1\uB9E4\uCD9C: ${proposal.commercialization?.revenue || "N/A"}
+기업: ${UMTR.company} | ${UMTR.mainBiz}
+공고: ${proposal.grantTitle || info.title}
+총 예산: ${proposal.totalBudget || info.budget}
+기간: ${proposal.period || info.years + "년"}
+사업화: ${proposal.commercialization?.strategy || "N/A"}
+목표시장: ${proposal.commercialization?.targetMarket || "N/A"}
+예상매출: ${proposal.commercialization?.revenue || "N/A"}
 
 {"recommendation":"GO|HOLD|NO-GO","reason":"","costEstimate":{"totalProject":"","govFunding":"","selfFunding":"","matchingRatio":""},"roi":{"expectedReturn":"","paybackPeriod":"","irr":""},"cashFlow":{"year1":"","year2":"","year3":"","breakEven":""},"risks":[{"item":"","impact":"high|mid|low","mitigation":""}],"keyMetrics":[{"label":"","value":"","status":"good|warning|danger"}]}`,
         }],
@@ -459,7 +459,7 @@ ${fitContext}
       }
       setStep("financial");
     } catch (err) {
-      alert("\uC7AC\uACBD\uBD84\uC11D \uC2E4\uD328: " + (err.message || "\uB2E4\uC2DC \uC2DC\uB3C4"));
+      alert("재경분석 실패: " + (err.message || "다시 시도"));
     }
     finally { setFinLoading(false); }
   }
@@ -478,7 +478,7 @@ ${fitContext}
         recommendation: finResult?.recommendation,
       });
       setSaved(true);
-    } catch { alert("Slack \uC804\uC1A1 \uC2E4\uD328"); }
+    } catch { alert("Slack 전송 실패"); }
     finally { setSaving(false); }
   }
 
@@ -491,18 +491,18 @@ ${fitContext}
     <div style={{ maxWidth: 600, margin: "32px auto", padding: "0 24px" }}>
       <StepIndicator steps={PIPELINE_STEPS} current={0}/>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>\u270D\uFE0F</div>
-        <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9", marginBottom: 6 }}>\uC0AC\uC5C5\uACC4\uD68D\uC11C \uD30C\uC774\uD504\uB77C\uC778</div>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>\uACF5\uACE0 \uC815\uBCF4 \u2192 RFP \uBD84\uC11D \u2192 \uCD08\uC548 \uC0DD\uC131 \u2192 \uC7AC\uACBD\uBD84\uC11D</div>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>✍️</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9", marginBottom: 6 }}>사업계획서 파이프라인</div>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>공고 정보 → RFP 분석 → 초안 생성 → 재경분석</div>
       </div>
 
       <div style={{ background: "#0a0c15", borderRadius: 14, border: "1px solid #ffffff09", padding: 20 }}>
         {[
-          { key: "title", label: "\uACF5\uACE0\uBA85 *", ph: "\uC608: \uBC14\uC774\uC624 \uC18C\uBD80\uC7A5 \uAE30\uC220\uAC1C\uBC1C \uC9C0\uC6D0\uC0AC\uC5C5" },
-          { key: "agency", label: "\uC8FC\uAD00\uAE30\uAD00", ph: "\uC608: \uC0B0\uC5C5\uD1B5\uC0C1\uC790\uC6D0\uBD80" },
-          { key: "budget", label: "\uC608\uC0B0\uADDC\uBAA8", ph: "\uC608: 30\uC5B5\uC6D0" },
-          { key: "url", label: "\uACF5\uACE0 URL", ph: "https://..." },
-          { key: "summary", label: "\uACF5\uACE0 \uC694\uC57D", ph: "\uACF5\uACE0 \uB0B4\uC6A9 \uAC04\uB7B5 \uC785\uB825 (\uC120\uD0DD)", rows: 3 },
+          { key: "title", label: "공고명 *", ph: "예: 바이오 소부장 기술개발 지원사업" },
+          { key: "agency", label: "주관기관", ph: "예: 산업통상자원부" },
+          { key: "budget", label: "예산규모", ph: "예: 30억원" },
+          { key: "url", label: "공고 URL", ph: "https://..." },
+          { key: "summary", label: "공고 요약", ph: "공고 내용 간략 입력 (선택)", rows: 3 },
         ].map(f => (
           <div key={f.key} style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 5 }}>{f.label}</div>
@@ -520,10 +520,10 @@ ${fitContext}
 
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 5 }}>\uC5F0\uAD6C\uAE30\uAC04</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 5 }}>연구기간</div>
             <select value={info.years} onChange={e => setInfo(p => ({ ...p, years: e.target.value }))}
               style={{ width: "100%", background: "#ffffff06", border: "1px solid #ffffff09", borderRadius: 8, padding: "10px 14px", color: "#e2e8f0", fontSize: 13 }}>
-              {["2", "3", "4", "5"].map(y => <option key={y} value={y}>{y}\uB144</option>)}
+              {["2", "3", "4", "5"].map(y => <option key={y} value={y}>{y}년</option>)}
             </select>
           </div>
         </div>
@@ -532,13 +532,13 @@ ${fitContext}
           style={{ width: "100%", marginTop: 18, padding: "14px", borderRadius: 12, border: "none",
             background: info.title ? "linear-gradient(135deg, #8b5cf6, #6366f1)" : "#1e1e2e",
             color: info.title ? "#fff" : "#4b5563", cursor: info.title ? "pointer" : "default", fontSize: 14, fontWeight: 700 }}>
-          \uD83D\uDD0D RFP \uBD84\uC11D \uC2DC\uC791
+          \uD83D\uDD0D RFP 분석 시작
         </button>
 
         <button onClick={() => { setStep("proposal"); generate(); }} disabled={!info.title}
           style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: 10, border: "1px solid #ffffff12",
             background: "transparent", color: "#6b7280", cursor: "pointer", fontSize: 12 }}>
-          RFP \uBD84\uC11D \uAC74\uB108\uB6F0\uACE0 \uBC14\uB85C \uCD08\uC548 \uC0DD\uC131 \u2192
+          RFP 분석 건너뛰고 바로 초안 생성 →
         </button>
       </div>
     </div>
@@ -550,9 +550,9 @@ ${fitContext}
       <StepIndicator steps={PIPELINE_STEPS} current={0}/>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
         <Spinner size={36}/>
-        <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>RFP \uBD84\uC11D \uC911...</div>
-        <div style={{ marginTop: 8, fontSize: 12, color: "#4b5563" }}>IRIS/NTIS \uACF5\uACE0 \uC815\uBCF4 \uC218\uC9D1 + \uC6C0\uD2C0 \uC801\uD569\uB3C4 \uBD84\uC11D</div>
-        <div style={{ marginTop: 4, fontSize: 11, color: "#374151" }}>30\uCD08~1\uBD84 \uC18C\uC694</div>
+        <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>RFP 분석 중...</div>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#4b5563" }}>IRIS/NTIS 공고 정보 수집 + 움틀 적합도 분석</div>
+        <div style={{ marginTop: 4, fontSize: 11, color: "#374151" }}>30초~1분 소요</div>
       </div>
     </div>
   );
@@ -562,8 +562,8 @@ ${fitContext}
       <StepIndicator steps={PIPELINE_STEPS} current={1}/>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
         <Spinner size={36}/>
-        <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>\uC0AC\uC5C5\uACC4\uD68D\uC11C \uCD08\uC548 \uC0DD\uC131 \uC911...</div>
-        <div style={{ marginTop: 8, fontSize: 12, color: "#4b5563" }}>\uC6C0\uD2C0 \uD504\uB85C\uD544 + \uACF5\uACE0 \uC694\uAC74 + R&D \uC804\uB7B5 \uBC18\uC601</div>
+        <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#a78bfa" }}>사업계획서 초안 생성 중...</div>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#4b5563" }}>움틀 프로필 + 공고 요건 + R&D 전략 반영</div>
       </div>
     </div>
   );
@@ -580,7 +580,7 @@ ${fitContext}
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
             <ScoreRing score={fit.overall_score || 0} size={72}/>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>\uC801\uD569\uB3C4 \uBD84\uC11D \uACB0\uACFC</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>적합도 분석 결과</div>
               <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{info.title}</div>
               <div style={{ display: "inline-block", marginTop: 8, padding: "4px 14px", borderRadius: 6, fontSize: 13, fontWeight: 700,
                 background: recColor(fit.recommendation) + "20", color: recColor(fit.recommendation) }}>
@@ -593,34 +593,34 @@ ${fitContext}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
-              ["\uAC15\uC810", fit.strengths, "#10b981"],
-              ["\uBCF4\uC644\uC810", fit.weaknesses, "#f59e0b"],
-              ["\uBD80\uD569 \uC5ED\uB7C9", fit.matching_capabilities, "#3b82f6"],
-              ["\uBD80\uC871 \uC694\uAC74", fit.missing_requirements, "#ef4444"],
+              ["강점", fit.strengths, "#10b981"],
+              ["보완점", fit.weaknesses, "#f59e0b"],
+              ["부합 역량", fit.matching_capabilities, "#3b82f6"],
+              ["부족 요건", fit.missing_requirements, "#ef4444"],
             ].map(([title, items, color]) => (
               <div key={title} style={{ background: "#ffffff04", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>{title}</div>
-                {(items || []).map((item, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>\u2022 {item}</div>)}
+                {(items || []).map((item, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>• {item}</div>)}
                 {(!items || items.length === 0) && <div style={{ fontSize: 11, color: "#374151" }}>-</div>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* RFP \uC694\uC57D */}
+        {/* RFP 요약 */}
         {rfp.objectives && (
           <div style={{ background: "#0a0c15", borderRadius: 14, border: "1px solid #ffffff09", padding: 20, marginBottom: 20 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>RFP \uC694\uC57D</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>RFP 요약</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {[
-                ["\uBAA9\uC801", rfp.objectives],
-                ["\uBC94\uC704", rfp.scope],
-                ["\uCD1D\uC608\uC0B0", rfp.budget_total],
-                ["\uACFC\uC81C\uB2F9", rfp.budget_per_project],
-                ["\uAE30\uAC04", rfp.duration],
-                ["\uC790\uACA9", rfp.eligibility],
-                ["\uB9C8\uAC10", rfp.deadline],
-                ["\uB300\uC751\uC790\uAE08", rfp.matching_fund],
+                ["목적", rfp.objectives],
+                ["범위", rfp.scope],
+                ["총예산", rfp.budget_total],
+                ["과제당", rfp.budget_per_project],
+                ["기간", rfp.duration],
+                ["자격", rfp.eligibility],
+                ["마감", rfp.deadline],
+                ["대응자금", rfp.matching_fund],
               ].filter(([, v]) => v).map(([label, value]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>{label}</div>
@@ -630,7 +630,7 @@ ${fitContext}
             </div>
             {rfp.evaluation_criteria && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>\uD3C9\uAC00\uAE30\uC900</div>
+                <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 3 }}>평가기준</div>
                 <div style={{ fontSize: 12, color: "#d1d5db", lineHeight: 1.6 }}>{rfp.evaluation_criteria}</div>
               </div>
             )}
@@ -640,12 +640,12 @@ ${fitContext}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => { setStep("input"); setRfpResult(null); }}
             style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid #ffffff12", background: "transparent", color: "#6b7280", cursor: "pointer", fontSize: 12 }}>
-            \u2190 \uB2E4\uC2DC \uC785\uB825
+            ← 다시 입력
           </button>
           <button onClick={generate} disabled={generating}
             style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none",
               background: "linear-gradient(135deg, #8b5cf6, #6366f1)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
-            \u270D\uFE0F \uC0AC\uC5C5\uACC4\uD68D\uC11C \uCD08\uC548 \uC0DD\uC131
+            ✍️ 사업계획서 초안 생성
           </button>
         </div>
       </div>
@@ -663,7 +663,7 @@ ${fitContext}
               {finResult.recommendation}
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>CFO \uC7AC\uACBD\uBD84\uC11D</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>CFO 재경분석</div>
               <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{finResult.reason}</div>
             </div>
           </div>
@@ -671,13 +671,13 @@ ${fitContext}
           {/* Cost Estimate */}
           {finResult.costEstimate && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", marginBottom: 10 }}>\uC0AC\uC5C5\uBE44 \uAD6C\uC870</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", marginBottom: 10 }}>사업비 구조</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
                 {[
-                  ["\uCD1D \uC0AC\uC5C5\uBE44", finResult.costEstimate.totalProject],
-                  ["\uC815\uBD80\uCD9C\uC5F0", finResult.costEstimate.govFunding],
-                  ["\uC790\uBD80\uB2F4", finResult.costEstimate.selfFunding],
-                  ["\uBE44\uC728", finResult.costEstimate.matchingRatio],
+                  ["총 사업비", finResult.costEstimate.totalProject],
+                  ["정부출연", finResult.costEstimate.govFunding],
+                  ["자부담", finResult.costEstimate.selfFunding],
+                  ["비율", finResult.costEstimate.matchingRatio],
                 ].map(([label, value]) => (
                   <div key={label} style={{ background: "#ffffff04", borderRadius: 8, padding: 12 }}>
                     <div style={{ fontSize: 10, color: "#6b7280" }}>{label}</div>
@@ -691,11 +691,11 @@ ${fitContext}
           {/* ROI */}
           {finResult.roi && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#10b981", marginBottom: 10 }}>ROI \uBD84\uC11D</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#10b981", marginBottom: 10 }}>ROI 분석</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                 {[
-                  ["\uAE30\uB300\uC218\uC775", finResult.roi.expectedReturn],
-                  ["\uD68C\uC218\uAE30\uAC04", finResult.roi.paybackPeriod],
+                  ["기대수익", finResult.roi.expectedReturn],
+                  ["회수기간", finResult.roi.paybackPeriod],
                   ["IRR", finResult.roi.irr],
                 ].map(([label, value]) => (
                   <div key={label} style={{ background: "#ffffff04", borderRadius: 8, padding: 12 }}>
@@ -710,12 +710,12 @@ ${fitContext}
           {/* Cash Flow */}
           {finResult.cashFlow && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#3b82f6", marginBottom: 10 }}>\uD604\uAE08\uD750\uB984</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#3b82f6", marginBottom: 10 }}>현금흐름</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
                 {[
-                  ["1\uCC28\uB144", finResult.cashFlow.year1],
-                  ["2\uCC28\uB144", finResult.cashFlow.year2],
-                  ["3\uCC28\uB144", finResult.cashFlow.year3],
+                  ["1차년", finResult.cashFlow.year1],
+                  ["2차년", finResult.cashFlow.year2],
+                  ["3차년", finResult.cashFlow.year3],
                   ["BEP", finResult.cashFlow.breakEven],
                 ].map(([label, value]) => (
                   <div key={label} style={{ background: "#ffffff04", borderRadius: 8, padding: 12 }}>
@@ -730,7 +730,7 @@ ${fitContext}
           {/* Risks */}
           {finResult.risks?.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", marginBottom: 10 }}>\uC704\uD5D8 \uC694\uC18C</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", marginBottom: 10 }}>위험 요소</div>
               {finResult.risks.map((r, i) => (
                 <div key={i} style={{ background: "#ffffff04", borderRadius: 8, padding: 12, marginBottom: 6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -739,7 +739,7 @@ ${fitContext}
                       background: r.impact === "high" ? "#ef444420" : r.impact === "mid" ? "#f59e0b20" : "#10b98120",
                       color: r.impact === "high" ? "#ef4444" : r.impact === "mid" ? "#f59e0b" : "#10b981" }}>{r.impact}</span>
                   </div>
-                  {r.mitigation && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>\uB300\uC751: {r.mitigation}</div>}
+                  {r.mitigation && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>대응: {r.mitigation}</div>}
                 </div>
               ))}
             </div>
@@ -748,7 +748,7 @@ ${fitContext}
           {/* Key Metrics */}
           {finResult.keyMetrics?.length > 0 && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#8b5cf6", marginBottom: 10 }}>\uD575\uC2EC \uC9C0\uD45C</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#8b5cf6", marginBottom: 10 }}>핵심 지표</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                 {finResult.keyMetrics.map((m, i) => (
                   <div key={i} style={{ background: "#ffffff04", borderRadius: 8, padding: 12, textAlign: "center" }}>
@@ -765,12 +765,12 @@ ${fitContext}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => setStep("proposal")}
             style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid #ffffff12", background: "transparent", color: "#6b7280", cursor: "pointer", fontSize: 12 }}>
-            \u2190 \uC0AC\uC5C5\uACC4\uD68D\uC11C
+            ← 사업계획서
           </button>
           <button onClick={saveProposal} disabled={saving || saved}
             style={{ flex: 1, padding: "14px", borderRadius: 12, border: "none",
               background: saved ? "#10b98140" : "linear-gradient(135deg, #10b981, #059669)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
-            {saved ? "\u2713 Slack \uC804\uC1A1 \uC644\uB8CC" : "\uD83D\uDCE4 Slack\uC73C\uB85C \uC804\uCCB4 \uBCF4\uACE0"}
+            {saved ? "✓ Slack 전송 완료" : "\uD83D\uDCE4 Slack으로 전체 보고"}
           </button>
         </div>
       </div>
@@ -781,7 +781,7 @@ ${fitContext}
   if (!proposal) return null;
   return (
     <div style={{ display: "flex", height: "calc(100vh - 112px)" }}>
-      {/* \uC0AC\uC774\uB4DC\uBC14 */}
+      {/* 사이드바 */}
       <div style={{ width: 180, borderRight: "1px solid #ffffff09", background: "#0a0c15", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "14px 14px 6px", fontSize: 9, color: "#4b5563", fontFamily: "monospace" }}>PROPOSAL SECTIONS</div>
         {SECTIONS.map(sec => (
@@ -795,30 +795,30 @@ ${fitContext}
           {!finResult && (
             <button onClick={runFinancial} disabled={finLoading}
               style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #f59e0b40, #f97316 40)", color: "#fbbf24", cursor: "pointer", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-              {finLoading ? <Spinner size={14} color="#fbbf24"/> : "\uD83D\uDCCA \uC7AC\uACBD\uBD84\uC11D"}
+              {finLoading ? <Spinner size={14} color="#fbbf24"/> : "\uD83D\uDCCA 재경분석"}
             </button>
           )}
           {finResult && (
             <button onClick={() => setStep("financial")}
               style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none", background: "#10b98120", color: "#10b981", cursor: "pointer", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-              \u2713 \uC7AC\uACBD\uBD84\uC11D \uBCF4\uAE30
+              ✓ 재경분석 보기
             </button>
           )}
           <button onClick={saveProposal} disabled={saving || saved}
             style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none", background: saved ? "#10b98120" : "#8b5cf620", color: saved ? "#10b981" : "#a78bfa", cursor: "pointer", fontSize: 11, marginBottom: 6 }}>
-            {saved ? "\u2713 Slack \uC804\uC1A1\uC644\uB8CC" : "Slack \uBCF4\uACE0"}
+            {saved ? "✓ Slack 전송완료" : "Slack 보고"}
           </button>
           <button onClick={() => { setProposal(null); setRfpResult(null); setFinResult(null); setStep("input"); setSaved(false); }}
             style={{ width: "100%", marginTop: 4, padding: "6px", borderRadius: 8, border: "1px solid #ffffff09", background: "transparent", color: "#4b5563", cursor: "pointer", fontSize: 10 }}>
-            \uCC98\uC74C\uBD80\uD130
+            처음부터
           </button>
         </div>
 
-        {/* RFP \uC801\uD569\uB3C4 \uBBF8\uB2C8 */}
+        {/* RFP 적합도 미니 */}
         {rfpResult?.fit_analysis && (
           <div style={{ padding: "0 14px 14px", marginTop: "auto" }}>
             <div style={{ background: "#ffffff04", borderRadius: 8, padding: 10, textAlign: "center" }}>
-              <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 4 }}>\uC801\uD569\uB3C4</div>
+              <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 4 }}>적합도</div>
               <ScoreRing score={rfpResult.fit_analysis.overall_score || 0} size={44}/>
               <div style={{ fontSize: 10, marginTop: 4, fontWeight: 700,
                 color: recColor(rfpResult.fit_analysis.recommendation) }}>
@@ -829,11 +829,11 @@ ${fitContext}
         )}
       </div>
 
-      {/* \uBCF8\uBB38 */}
+      {/* 본문 */}
       <div style={{ flex: 1, overflowY: "auto", padding: "28px 36px" }}>
         <div style={{ maxWidth: 720 }}>
           <div style={{ marginBottom: 28, paddingBottom: 20, borderBottom: "1px solid #ffffff09" }}>
-            <div style={{ fontSize: 10, color: "#8b5cf6", fontFamily: "monospace", marginBottom: 6 }}>GRANTIQ \u00B7 \uC0AC\uC5C5\uACC4\uD68D\uC11C \uCD08\uC548</div>
+            <div style={{ fontSize: 10, color: "#8b5cf6", fontFamily: "monospace", marginBottom: 6 }}>GRANTIQ · 사업계획서 초안</div>
             <div style={{ fontSize: 20, fontWeight: 900, color: "#f8fafc", lineHeight: 1.4 }}>{proposal.grantTitle || info.title}</div>
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
               {[proposal.agency, proposal.period, proposal.totalBudget, UMTR.company].map((v, i) =>
@@ -845,19 +845,19 @@ ${fitContext}
           {/* Section Contents */}
           {activeSection === "overview" && proposal.overview && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>1. \uACFC\uC81C \uAC1C\uC694</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>1. 과제 개요</h3>
               <p style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1.8 }}>{proposal.overview.summary}</p>
               <div style={{ background: "#3b82f610", borderRadius: 8, padding: "12px 14px", border: "1px solid #3b82f620", marginTop: 14 }}>
-                <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 700, marginBottom: 4 }}>\uC2E0\uCCAD\uC790</div>
+                <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 700, marginBottom: 4 }}>신청자</div>
                 <div style={{ fontSize: 12, color: "#d1d5db" }}>{proposal.overview.applicant}</div>
-                {proposal.overview.techField && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>\uAE30\uC220\uBD84\uC57C: {proposal.overview.techField}</div>}
+                {proposal.overview.techField && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>기술분야: {proposal.overview.techField}</div>}
               </div>
             </div>
           )}
 
           {activeSection === "background" && proposal.background && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>2. \uBC30\uACBD \uBC0F \uD544\uC694\uC131</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>2. 배경 및 필요성</h3>
               <p style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1.9, whiteSpace: "pre-wrap" }}>
                 {[proposal.background.problem, proposal.background.necessity, proposal.background.marketSize, proposal.background.trend, proposal.background.gap].filter(Boolean).join("\n\n")}
               </p>
@@ -866,18 +866,18 @@ ${fitContext}
 
           {activeSection === "goal" && proposal.finalGoal && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>3. \uCD5C\uC885 \uBAA9\uD45C</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>3. 최종 목표</h3>
               <div style={{ background: "#10b98110", borderRadius: 8, padding: "14px", border: "1px solid #10b98120", marginBottom: 16 }}>
                 <p style={{ fontSize: 13, color: "#d1d5db", fontWeight: 600 }}>{proposal.finalGoal.statement}</p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {[
-                  ["\uAE30\uC220 \uBAA9\uD45C", proposal.finalGoal.techGoals, "#3b82f6"],
-                  ["\uC0AC\uC5C5\uD654 \uBAA9\uD45C", proposal.finalGoal.bizGoals, "#10b981"],
+                  ["기술 목표", proposal.finalGoal.techGoals, "#3b82f6"],
+                  ["사업화 목표", proposal.finalGoal.bizGoals, "#10b981"],
                 ].map(([title, items, color]) => (
                   <div key={title} style={{ background: "#ffffff05", borderRadius: 8, padding: "14px" }}>
                     <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>{title}</div>
-                    {items?.map((g, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>\u2022 {g}</div>)}
+                    {items?.map((g, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>• {g}</div>)}
                   </div>
                 ))}
               </div>
@@ -886,19 +886,19 @@ ${fitContext}
 
           {activeSection === "annual" && proposal.annualGoals && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>4. \uC5F0\uCC28\uBCC4 \uBAA9\uD45C</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>4. 연차별 목표</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {proposal.annualGoals.map((g, i) => (
                   <div key={i} style={{ background: "#0d1020", borderRadius: 12, border: `1px solid ${YC[i]}30`, padding: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: YC[i] + "20", color: YC[i], fontWeight: 700 }}>{g.year || i+1}\uCC28\uB144</span>
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: YC[i] + "20", color: YC[i], fontWeight: 700 }}>{g.year || i+1}차년</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>{g.title}</span>
                     </div>
-                    {g.objectives?.map((o, j) => <div key={j} style={{ fontSize: 11, color: "#94a3b8", padding: "2px 0" }}>\u2022 {o}</div>)}
+                    {g.objectives?.map((o, j) => <div key={j} style={{ fontSize: 11, color: "#94a3b8", padding: "2px 0" }}>• {o}</div>)}
                     {g.milestones?.length > 0 && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #ffffff06" }}>
                         <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Milestones</div>
-                        {g.milestones.map((m, j) => <div key={j} style={{ fontSize: 11, color: "#8b5cf6" }}>\u2192 {m}</div>)}
+                        {g.milestones.map((m, j) => <div key={j} style={{ fontSize: 11, color: "#8b5cf6" }}>→ {m}</div>)}
                       </div>
                     )}
                   </div>
@@ -909,10 +909,10 @@ ${fitContext}
 
           {activeSection === "budget" && proposal.budgetOutline && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>5. \uC608\uC0B0 \uD3B8\uC131</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>5. 예산 편성</h3>
               <div style={{ background: "#0d1020", borderRadius: 12, overflow: "hidden", border: "1px solid #ffffff09" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", padding: "8px 14px", background: "#ffffff06", fontSize: 10, color: "#6b7280", fontWeight: 600 }}>
-                  <span>\uD56D\uBAA9</span><span>\uAE08\uC561</span><span>\uBE44\uC728</span>
+                  <span>항목</span><span>금액</span><span>비율</span>
                 </div>
                 {proposal.budgetOutline.map((b, i) => (
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", padding: "10px 14px", borderTop: "1px solid #ffffff06", fontSize: 12 }}>
@@ -927,13 +927,13 @@ ${fitContext}
 
           {activeSection === "commercialize" && proposal.commercialization && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>6. \uC0AC\uC5C5\uD654 \uACC4\uD68D</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>6. 사업화 계획</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {[
-                  ["\uC804\uB7B5", proposal.commercialization.strategy, "#8b5cf6"],
-                  ["\uBAA9\uD45C\uC2DC\uC7A5", proposal.commercialization.targetMarket, "#3b82f6"],
-                  ["\uD0C0\uC784\uB77C\uC778", proposal.commercialization.timeline, "#10b981"],
-                  ["\uC608\uC0C1\uB9E4\uCD9C", proposal.commercialization.revenue, "#f59e0b"],
+                  ["전략", proposal.commercialization.strategy, "#8b5cf6"],
+                  ["목표시장", proposal.commercialization.targetMarket, "#3b82f6"],
+                  ["타임라인", proposal.commercialization.timeline, "#10b981"],
+                  ["예상매출", proposal.commercialization.revenue, "#f59e0b"],
                 ].map(([title, value, color]) => (
                   <div key={title} style={{ background: "#ffffff05", borderRadius: 8, padding: 14 }}>
                     <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 6 }}>{title}</div>
@@ -946,16 +946,16 @@ ${fitContext}
 
           {activeSection === "effect" && proposal.expectedEffects && (
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>7. \uAE30\uB300\uD6A8\uACFC</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#f1f5f9", marginBottom: 14 }}>7. 기대효과</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 {[
-                  ["\uAE30\uC220\uC801", proposal.expectedEffects.technical, "#3b82f6"],
-                  ["\uACBD\uC81C\uC801", proposal.expectedEffects.economic, "#10b981"],
-                  ["\uC0AC\uD68C\uC801", proposal.expectedEffects.social, "#f59e0b"],
+                  ["기술적", proposal.expectedEffects.technical, "#3b82f6"],
+                  ["경제적", proposal.expectedEffects.economic, "#10b981"],
+                  ["사회적", proposal.expectedEffects.social, "#f59e0b"],
                 ].map(([title, items, color]) => (
                   <div key={title} style={{ background: "#ffffff05", borderRadius: 8, padding: 14 }}>
                     <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 8 }}>{title}</div>
-                    {(items || []).map((item, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>\u2022 {item}</div>)}
+                    {(items || []).map((item, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0" }}>• {item}</div>)}
                   </div>
                 ))}
               </div>
@@ -967,7 +967,7 @@ ${fitContext}
   );
 }
 
-// \u2500\u2500\u2500 \uBA54\uC778 \uC571 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── 메인 앱 ────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("search");
   const [prefillGrant, setPrefillGrant] = useState(null);
@@ -978,26 +978,26 @@ export default function App() {
   }
 
   const TABS = [
-    { id: "search", label: "\uD83D\uDD0D \uACF5\uACE0 \uD0D0\uC0C9" },
-    { id: "proposal", label: "\u270D\uFE0F \uC0AC\uC5C5\uACC4\uD68D\uC11C" },
+    { id: "search", label: "\uD83D\uDD0D 공고 탐색" },
+    { id: "proposal", label: "✍️ 사업계획서" },
   ];
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#060810", color: "#e2e8f0", fontFamily: "'Noto Sans KR', -apple-system, sans-serif" }}>
       <Head>
-        <title>GRANTIQ \u2014 {UMTR.company}</title>
+        <title>GRANTIQ — {UMTR.company}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
       </Head>
       <style>{`*{box-sizing:border-box;margin:0;padding:0} @keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}} ::selection{background:#8b5cf640} input::placeholder,textarea::placeholder{color:#374151} ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-thumb{background:#ffffff12;border-radius:3px}`}</style>
 
-      {/* \uD5E4\uB354 */}
+      {/* 헤더 */}
       <div style={{ padding: "0 28px", borderBottom: "1px solid #ffffff09", background: "#0a0c15", display: "flex", alignItems: "center", height: 52 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginRight: 32 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #8b5cf6, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>\u26A1</div>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #8b5cf6, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>⚡</div>
           <span style={{ fontSize: 14, fontWeight: 900 }}>GRANTIQ</span>
         </div>
-        {/* \uD0ED */}
+        {/* 탭 */}
         <div style={{ display: "flex", height: "100%", gap: 2 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -1006,15 +1006,15 @@ export default function App() {
             </button>
           ))}
         </div>
-        {/* \uAE30\uC5C5 \uD45C\uC2DC */}
+        {/* 기업 표시 */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "pulse 2s infinite" }}/>
-          <span style={{ fontSize: 11, color: "#10b981" }}>\uC2E4\uC2DC\uAC04 \uAC80\uC0C9</span>
+          <span style={{ fontSize: 11, color: "#10b981" }}>실시간 검색</span>
           <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, background: "#3b82f620", color: "#3b82f6" }}>{UMTR.company}</span>
         </div>
       </div>
 
-      {/* \uCF58\uD150\uCE20 */}
+      {/* 콘텐츠 */}
       {tab === "search" && <GrantSearch onSelectGrant={handleSelectGrant}/>}
       {tab === "proposal" && <ProposalGenerator prefillGrant={prefillGrant}/>}
     </div>
