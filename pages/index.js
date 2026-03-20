@@ -170,25 +170,53 @@ function GrantSearch({ onSelectGrant }) {
     if (analysis[grant.title]) return;
     setAnalyzing(grant.title);
     try {
-      const data = await callClaude({
-        messages: [{
-          role: "user",
-          content: `기업: ${UMTR.company} | ${UMTR.mainBiz} | 키워드: ${UMTR.keywords.join(", ")}\n공고: ${grant.title}\n기관: ${grant.agency}\n\n분석 JSON: {"verdict":"S|A|B|C","fitScore":0∼100,"reasons":["구체적 이유"],"strategy":"접근전략","risk":"주요위험"}`,
-        }],
-      });
-      const text = data.content?.[0]?.text || "{}";
-      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setAnalysis(p => ({ ...p, [grant.title]: parsed }));
-    } catch { setAnalyzing(null); }
+      const data = await callIrisAnalyze(grant);
+      const fit = data.fit_analysis || {};
+      const rfp = data.rfp || {};
+      // verdict 매핑: overall_score → S/A/B/C
+      const score = fit.overall_score || 0;
+      const verdict = score >= 80 ? "S" : score >= 60 ? "A" : score >= 40 ? "B" : "C";
+      setAnalysis(p => ({ ...p, [grant.title]: {
+        verdict,
+        fitScore: score,
+        recommendation: fit.recommendation || "",
+        reasons: fit.strengths || [],
+        weaknesses: fit.weaknesses || [],
+        matchingCapabilities: fit.matching_capabilities || [],
+        missingRequirements: fit.missing_requirements || [],
+        strategy: fit.reason || "",
+        risk: (fit.weaknesses || []).slice(0, 2).join(", ") || "분석 중",
+        rfp,
+        raw: data,
+      }}));
+    } catch (err) {
+      console.error("IRIS analyze error:", err);
+      // 실패 시 간이 Claude 분석으로 폴백
+      try {
+        const data = await callClaude({
+          messages: [{
+            role: "user",
+            content: `기업: ${UMTR.company} | ${UMTR.mainBiz} | 키워드: ${UMTR.keywords.join(", ")}\n공고: ${grant.title}\n기관: ${grant.agency}\n\n분석 JSON: {"verdict":"S|A|B|C","fitScore":0,"reasons":["이유"],"strategy":"전략","risk":"위험"}`,
+          }],
+        });
+        const text = data.content?.[0]?.text || "{}";
+        const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+        setAnalysis(p => ({ ...p, [grant.title]: parsed }));
+      } catch { /* 최종 실패 */ }
+    }
     finally { setAnalyzing(null); }
   }
 
   async function saveGrant(grant) {
     try {
       const an = analysis[grant.title];
-      await postToSlack("shareGrant", { ...grant, verdict: an?.verdict });
+      await postToSlack("shareGrant", {
+        ...grant,
+        matchScore: an?.fitScore || grant.matchScore || 0,
+        verdict: an ? `[${an.verdict}등급] 적합도 ${an.fitScore}점 (${an.recommendation || ""})\n${an.strategy || ""}` : null,
+      });
       setSaved(p => ({ ...p, [grant.title]: true }));
-    } catch { alert("Slack 전송 실패. .env SLACK_WEBHOOK_URL 확인"); }
+    } catch { alert("Slack 전송 실패. Vercel 환경변수 확인:\n- SLACK_WEBHOOK_URL\n- INTERNAL_API_SECRET"); }
   }
 
   const s = selected; const an = s ? analysis[s.title] : null;
@@ -272,18 +300,80 @@ function GrantSearch({ onSelectGrant }) {
 
               {/* 분석 결과 */}
               {analyzing === s.title ? (
-                <div style={{ padding: 20, textAlign: "center" }}><Spinner size={24}/><div style={{ fontSize: 11, color: "#6b7280", marginTop: 8 }}>분석 중...</div></div>
+                <div style={{ padding: 30, textAlign: "center" }}>
+                  <Spinner size={28}/>
+                  <div style={{ fontSize: 12, color: "#8b5cf6", marginTop: 12, fontWeight: 600 }}>IRIS 상세 분석 중...</div>
+                  <div style={{ fontSize: 10, color: "#4b5563", marginTop: 4 }}>공고 정보 수집 + 움틀 적합도 분석 (30초~1분)</div>
+                </div>
               ) : an ? (
-                <div style={{ background: "#0d1020", borderRadius: 12, padding: 16, border: "1px solid #ffffff09", marginBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: gColor(an.verdict) }}>{an.verdict}</div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>적합도: {an.fitScore}%</div>
-                      <div style={{ fontSize: 10, color: "#6b7280" }}>리스크: {an.risk}</div>
+                <div style={{ marginBottom: 20 }}>
+                  {/* 상단 스코어 카드 */}
+                  <div style={{ background: "#0d1020", borderRadius: 14, padding: 20, border: "1px solid #ffffff09", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                      <ScoreRing score={an.fitScore || 0} size={64}/>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 22, fontWeight: 900, color: gColor(an.verdict) }}>{an.verdict}</span>
+                          {an.recommendation && (
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 5,
+                              background: ({GO:"#10b98120",HOLD:"#f59e0b20","NO-GO":"#ef444420"})[an.recommendation] || "#ffffff08",
+                              color: ({GO:"#10b981",HOLD:"#f59e0b","NO-GO":"#ef4444"})[an.recommendation] || "#9ca3af" }}>
+                              {an.recommendation}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>적합도 {an.fitScore}점</div>
+                        {an.risk && <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>주요 리스크: {an.risk}</div>}
+                      </div>
+                    </div>
+
+                    {/* 전략/종합 의견 */}
+                    {an.strategy && (
+                      <div style={{ background: "#ffffff04", borderRadius: 8, padding: 12, marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, color: "#8b5cf6", fontWeight: 700, marginBottom: 4 }}>AI 종합 의견</div>
+                        <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7 }}>{an.strategy}</div>
+                      </div>
+                    )}
+
+                    {/* 강점 / 보완점 그리드 */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      {[
+                        ["강점", an.reasons, "#10b981"],
+                        ["보완점", an.weaknesses, "#f59e0b"],
+                        ["부합 역량", an.matchingCapabilities, "#3b82f6"],
+                        ["부족 요건", an.missingRequirements, "#ef4444"],
+                      ].filter(([, items]) => items && items.length > 0).map(([title, items, color]) => (
+                        <div key={title} style={{ background: "#ffffff04", borderRadius: 8, padding: 10 }}>
+                          <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 6 }}>{title}</div>
+                          {items.map((item, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "2px 0", lineHeight: 1.5 }}>• {item}</div>)}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {an.reasons?.map((r, i) => <div key={i} style={{ fontSize: 11, color: "#94a3b8", padding: "3px 0", borderBottom: "1px solid #ffffff06" }}>• {r}</div>)}
-                  {an.strategy && <div style={{ fontSize: 11, color: "#a78bfa", marginTop: 8 }}>전략: {an.strategy}</div>}
+
+                  {/* RFP 요약 (있을 경우) */}
+                  {an.rfp && an.rfp.objectives && (
+                    <div style={{ background: "#0d1020", borderRadius: 14, padding: 16, border: "1px solid #ffffff09", marginBottom: 14 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#f1f5f9", marginBottom: 10 }}>📋 RFP 요약</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {[
+                          ["목적", an.rfp.objectives],
+                          ["범위", an.rfp.scope],
+                          ["총예산", an.rfp.budget_total],
+                          ["과제당", an.rfp.budget_per_project],
+                          ["기간", an.rfp.duration],
+                          ["자격", an.rfp.eligibility],
+                          ["마감", an.rfp.deadline],
+                          ["대응자금", an.rfp.matching_fund],
+                        ].filter(([, v]) => v).map(([label, value]) => (
+                          <div key={label}>
+                            <div style={{ fontSize: 9, color: "#6b7280", marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 11, color: "#d1d5db", lineHeight: 1.5 }}>{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
