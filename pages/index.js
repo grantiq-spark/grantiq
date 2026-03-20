@@ -95,8 +95,10 @@ function GrantSearch({ onSelectGrant }) {
         }],
       });
       const text = data.content?.find(b => b.type === "text")?.text || "{}";
-      const m = text.match(/\{[\s\S]*\}/);
-      const parsed = m ? JSON.parse(m[0]) : { grants: [] };
+      let cleanText = text.replace(/```json\n?|```\n?/g, "").trim();
+      const m = cleanText.match(/\{[\s\S]*\}/);
+      let parsed = { grants: [] };
+      if (m) { try { parsed = JSON.parse(m[0]); } catch(e) { console.error("JSON parse error:", e); } }
       const sorted = (parsed.grants || []).sort((a, b) => (b.matchScore||0) - (a.matchScore||0));
       setGrants(sorted);
       setStatus(parsed.searchSummary || `${sorted.length}개 공고`);
