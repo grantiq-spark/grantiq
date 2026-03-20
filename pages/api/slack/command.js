@@ -5,7 +5,7 @@ import { fetchOpportunities } from "../../../lib/monitor/fetchOpportunities.js";
 import { verifyOpportunity } from "../../../lib/monitor/verifyOpportunity.js";
 import { runBoardReview } from "../../../lib/workflows/boardReview.js";
 import { dbInsert, dbList } from "../../../lib/db/index.js";
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: false }, maxDuration: 60 };
 async function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
