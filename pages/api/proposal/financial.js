@@ -3,7 +3,7 @@
  * POST /api/proposal/financial
  * Body: { opportunity, proposal?, duration? }
  *
- * CFO ê´ì  ì¬ê²½ë¶ì â ìì° ë°°ë¶, ROI, íê¸íë¦, ë¦¬ì¤í¬
+ * CFO financial analysis - budget allocation, ROI, cash flow, risk
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { buildMemoryContext } from "../../../lib/store/companyMemory.js";
@@ -19,69 +19,69 @@ export default async function handler(req, res) {
   try {
     const { opportunity, proposal, duration = 3 } = req.body || {};
     if (!opportunity?.title) {
-      return res.status(400).json({ error: "ê³µê³  ì ë³´ íì" });
+      return res.status(400).json({ error: "opportunity.title required" });
     }
 
     const memory = await buildMemoryContext();
 
     const proposalCtx = proposal
-      ? "\nì¬ìê³íì ì´ì:\n" +
-        "- ê³¼ì ëª: " + (proposal.project_title || "") + "\n" +
-        "- ê°ì: " + (proposal.overview || "").slice(0, 200) + "\n" +
-        "- ìì°ê³í: " + (proposal.budget_outline || "") + "\n" +
-        "- ì¬ìíì ëµ: " + (proposal.commercialization || "").slice(0, 200) + "\n" +
-        "- ì°êµ¬ì§: " + (proposal.team_composition || "").slice(0, 150)
+      ? "\nProposal draft:\n" +
+        "- Title: " + (proposal.project_title || "") + "\n" +
+        "- Overview: " + (proposal.overview || "").slice(0, 200) + "\n" +
+        "- Budget: " + (proposal.budget_outline || "") + "\n" +
+        "- Commercialization: " + (proposal.commercialization || "").slice(0, 200) + "\n" +
+        "- Team: " + (proposal.team_composition || "").slice(0, 150)
       : "";
 
     const prompt =
-      "ë¹ì ì CFO(ì¬ë¬´ì´ì¬)ìëë¤. ìë R&D ê³¼ì  ì ìì ëí ìì¸ ì¬ê²½ë¶ìì ìííì¸ì.\n\n" +
-      "íì¬: " + memory.company_name + "\n" +
-      "ê¸°ì ì­ë: " + memory.capabilities.slice(0, 4).join(", ") + "\n\n" +
-      "ê³µê³  ì ë³´:\n" +
-      "- ê³µê³ ëª: " + opportunity.title + "\n" +
-      "- ì£¼ê´ê¸°ê´: " + (opportunity.organization || "") + "\n" +
-      "- ìì°: " + (opportunity.budget || "") + "\n" +
+      "You are a CFO (Chief Financial Officer). Perform detailed financial analysis for the R&D grant proposal below. Respond in Korean.\n\n" +
+      "Company: " + memory.company_name + "\n" +
+      "Capabilities: " + memory.capabilities.slice(0, 4).join(", ") + "\n\n" +
+      "Grant info:\n" +
+      "- Name: " + opportunity.title + "\n" +
+      "- Agency: " + (opportunity.organization || "") + "\n" +
+      "- Budget: " + (opportunity.budget || "") + "\n" +
       proposalCtx + "\n\n" +
-      "ì°êµ¬ê¸°ê°: " + duration + "ë\n\n" +
-      "ìë JSON íìì¼ë¡ ìì¸ ì¬ê²½ë¶ì ê²°ê³¼ë¥¼ ë°ííì¸ì:\n" +
+      "Duration: " + duration + " years\n\n" +
+      "Return results as JSON with this structure:\n" +
       JSON.stringify(
         {
-          total_government_funding: "ì ë¶ ì§ìê¸ ì´ì¡",
-          total_self_funding: "ìë¶ë´ê¸ ì´ì¡",
-          matching_ratio: "ëììê¸ ë¹ì¨",
+          total_government_funding: "total govt funding amount",
+          total_self_funding: "total self-funding amount",
+          matching_ratio: "matching fund ratio",
           annual_budget: [
             {
               year: 1,
-              government: "ì ë¶ì§ì",
-              self_fund: "ìë¶ë´",
-              total: "í©ê³",
+              government: "govt funding",
+              self_fund: "self funding",
+              total: "total",
               breakdown: {
-                ì¸ê±´ë¹: "",
-                ì¬ë£ë¹: "",
-                ìíì°êµ¬ë¹: "",
-                ê°ì ë¹: "",
+                personnel: "",
+                materials: "",
+                outsourcing: "",
+                indirect: "",
               },
             },
           ],
           cash_flow_analysis: {
-            monthly_burn_rate: "ì ìì ê¸ì¡",
-            funding_timeline: "ìê¸ ì§í ìê¸°",
-            cash_reserve_needed: "íì íê¸ ë³´ì ë",
-            risk_period: "ìê¸ ìí êµ¬ê°",
+            monthly_burn_rate: "monthly expenditure",
+            funding_timeline: "funding disbursement timeline",
+            cash_reserve_needed: "required cash reserve",
+            risk_period: "cash risk period",
           },
           roi_analysis: {
-            break_even_point: "ììµë¶ê¸°ì ",
-            expected_revenue_3y: "3ë í ìì ë§¤ì¶",
-            expected_revenue_5y: "5ë í ìì ë§¤ì¶",
+            break_even_point: "break-even point",
+            expected_revenue_3y: "3-year revenue forecast",
+            expected_revenue_5y: "5-year revenue forecast",
             roi_percentage: "ROI %",
           },
           risk_assessment: {
-            financial_risks: ["ì¬ë¬´ ë¦¬ì¤í¬"],
-            mitigation: ["ëì ë°©ì"],
+            financial_risks: ["financial risk items"],
+            mitigation: ["mitigation strategies"],
           },
           recommendation: "GO/HOLD/NO-GO",
-          reason: "íë¨ ê·¼ê±° 3ì¤",
-          key_conditions: ["ì¬ë¬´ì  ì¡°ê±´ë¶ ì¹ì¸ ì¡°ê±´"],
+          reason: "3-line rationale",
+          key_conditions: ["conditional approval terms"],
         },
         null,
         2
@@ -125,8 +125,10 @@ export default async function handler(req, res) {
     if (err?.status === 429) {
       return res
         .status(429)
-        .json({ error: "API ìì²­ íë ì´ê³¼", code: "RATE_LIMIT" });
+        .json({ error: "API rate limit exceeded", code: "RATE_LIMIT" });
     }
-    return res.status(500).json({ error: err.message || "ì¬ê²½ë¶ì ì¤ë¥" });
+    return res
+      .status(500)
+      .json({ error: err.message || "Financial analysis error" });
   }
 }
