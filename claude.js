@@ -14,9 +14,9 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   try {
-    const { messages, system, tools, tool_choice, max_tokens = 2000 } = req.body;
+    const { messages, system, tools, tool_choice, max_tokens = 2000, model } = req.body;
 
-    const baseParams = { model: "claude-sonnet-4-6", max_tokens };
+    const baseParams = { model: model || "claude-sonnet-4-6", max_tokens };
     if (system) baseParams.system = system;
     if (tools) baseParams.tools = tools;
     if (tool_choice) baseParams.tool_choice = tool_choice;
